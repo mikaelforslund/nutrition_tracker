@@ -1,0 +1,45 @@
+# Builds the image and deploys it to Cloud Run.
+#
+#   gcloud builds submit --config infra/gcp/cloudbuild.yaml \
+#     --substitutions=_SUPABASE_URL=https://<project-ref>.supabase.co,_SUPABASE_ANON_KEY=<anon-key> .
+#
+# Expects these Secret Manager secrets: nutrition-database-url and
+# nutrition-supabase-service-role-key.
+substitutions:
+  _REGION: europe-north1
+  _REPOSITORY: trackerx
+  _SERVICE: nutrition-tracker
+  _SUPABASE_URL: ""
+  _SUPABASE_ANON_KEY: ""
+  _STORAGE_BUCKET: nutrition-uploads
+
+steps:
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file=apps/nutrition-tracker/Dockerfile
+      - --tag=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$BUILD_ID
+      - .
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$BUILD_ID
+
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$BUILD_ID
+      - --region=${_REGION}
+      - --allow-unauthenticated
+      - --set-env-vars=AUTH_MODE=supabase,STORAGE_DRIVER=supabase,SUPABASE_URL=${_SUPABASE_URL},SUPABASE_ANON_KEY=${_SUPABASE_ANON_KEY},STORAGE_BUCKET=${_STORAGE_BUCKET}
+      - --set-secrets=DATABASE_URL=nutrition-database-url:latest,SUPABASE_SERVICE_ROLE_KEY=nutrition-supabase-service-role-key:latest
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}:$BUILD_ID

@@ -1,0 +1,64 @@
+@import "@trackerx/ui/styles.css";
+
+/* iOS system colors and metrics for the /m app. */
+@theme {
+  --font-ios: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+
+  --color-ios-bg: #f2f2f7;
+  --color-ios-card: #ffffff;
+  --color-ios-label: #000000;
+  --color-ios-secondary: #3c3c4399;
+  --color-ios-tertiary: #3c3c434d;
+  --color-ios-separator: #3c3c434a;
+  --color-ios-fill: #78788029;
+  --color-ios-bar: #f9f9f9cc;
+  --color-ios-blue: #007aff;
+  --color-ios-green: #34c759;
+  --color-ios-orange: #ff9500;
+  --color-ios-red: #ff3b30;
+
+  --animate-ios-sheet: ios-sheet 0.34s cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-ios-fade: ios-fade 0.2s ease-out;
+
+  @keyframes ios-sheet {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes ios-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .ios-app {
+    --color-ios-bg: #000000;
+    --color-ios-card: #1c1c1e;
+    --color-ios-label: #ffffff;
+    --color-ios-secondary: #ebebf599;
+    --color-ios-tertiary: #ebebf54d;
+    --color-ios-separator: #54545899;
+    --color-ios-fill: #78788052;
+    --color-ios-bar: #1e1e1ecc;
+    --color-ios-blue: #0a84ff;
+    --color-ios-green: #30d158;
+    --color-ios-orange: #ff9f0a;
+    --color-ios-red: #ff453a;
+  }
+}
+
+.ios-app {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior-y: none;
+  touch-action: manipulation;
+}

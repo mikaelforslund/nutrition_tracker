@@ -1,0 +1,26 @@
+{
+  "name": "trackerx",
+  "private": true,
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=26.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "db:up": "./scripts/compose.sh up -d --wait db",
+    "db:down": "./scripts/compose.sh down",
+    "db:reset": "./scripts/compose.sh down -v && ./scripts/compose.sh up -d --wait db",
+    "stack:up": "./scripts/build-image.sh && ./scripts/compose.sh up -d --wait",
+    "stack:phone": "./scripts/stack-phone.sh",
+    "stack:down": "./scripts/compose.sh down"
+  },
+  "devDependencies": {
+    "qrcode": "^1.5.4",
+    "turbo": "^2.11.10",
+    "typescript": "~5.9.3"
+  }
+}

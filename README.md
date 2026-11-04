@@ -82,8 +82,10 @@ vision model pulled:
 ollama pull qwen3.5:9b
 ```
 
-Use `VISION_MODEL` and `VISION_BASE_URL` to point elsewhere, or `VISION_PROVIDER=mock`
-to run without a model. Without the variable, the app defaults to the mock, which is
+Change the endpoint and model on the dashboard's Settings page, which overrides
+`VISION_MODEL` and `VISION_BASE_URL`, or use `VISION_PROVIDER=mock` to run without a
+model. Settings are stored in `app_settings`, with any API key in plain text, and the
+page only exists with `AUTH_MODE=mock`. Without the variable, the app defaults to the mock, which is
 what Cloud Run gets unless you configure a reachable inference server.
 
 Photos are shrunk to `VISION_MAX_IMAGE_PX` (512 by default) before they reach the

@@ -1,0 +1,74 @@
+# Works with both `podman compose` and `docker compose`.
+#
+# Podman notes:
+#   - Images are fully qualified so they resolve without unqualified-search
+#     registries being configured.
+#   - Bind mounts carry the `z` label so they stay readable on SELinux hosts.
+#     The flag is ignored elsewhere.
+#   - On macOS, run `podman machine start` first. The project must live under
+#     a path the machine shares, which includes /Users by default.
+name: trackerx
+
+services:
+  db:
+    image: docker.io/library/postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      # Bound to loopback, on Supabase's local port to avoid clashing with a
+      # host Postgres on 5432.
+      - "127.0.0.1:54322:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./infra/local/initdb:/docker-entrypoint-initdb.d:ro,z
+      - ./supabase:/supabase:ro,z
+    healthcheck:
+      # TCP on purpose: during first-boot init Postgres listens only on its
+      # unix socket, so this stays unhealthy until migrations have finished.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+  app:
+    image: localhost/trackerx/nutrition-tracker:local
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/postgres
+      AUTH_MODE: mock
+      ALLOW_MOCK_AUTH: "true"
+      MOCK_USER_ID: 00000000-0000-4000-8000-000000000001
+      STORAGE_DRIVER: local
+      UPLOAD_DIR: /data/uploads
+      ENABLE_DB_VIEWER: ${ENABLE_DB_VIEWER:-true}
+      VISION_PROVIDER: ${VISION_PROVIDER:-openai}
+      # Ollama on the host machine. With Docker, set VISION_BASE_URL to
+      # http://host.docker.internal:11434/v1 instead.
+      VISION_BASE_URL: ${VISION_BASE_URL:-http://host.containers.internal:11434/v1}
+      VISION_MODEL: ${VISION_MODEL:-qwen3.5:9b}
+      MOCK_VISION_LATENCY_MS: "1000"
+    ports:
+      # Loopback unless you opt in with `pnpm stack:phone`, because the app has no
+      # real authentication yet.
+      - "${APP_BIND:-127.0.0.1}:3000:3000"
+    volumes:
+      - uploads:/data/uploads
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+volumes:
+  db-data:
+  uploads:

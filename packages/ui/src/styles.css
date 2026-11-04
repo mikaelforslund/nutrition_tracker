@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+/* Paths are relative to this file, so consuming apps get these classes too. */
+@source "./";
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+
+  --color-accent: #0f766e;
+  --color-accent-strong: #115e59;
+  --color-accent-track: #ccebe7;
+
+  /* Status colours are reserved for state and always ship with an icon + label. */
+  --color-status-good: #0ca30c;
+  --color-status-good-ink: #006300;
+  --color-status-warning: #fab219;
+  --color-status-warning-track: #fdeec7;
+  --color-status-warning-ink: #7a5200;
+  --color-status-critical: #d03b3b;
+  --color-status-critical-track: #f8dcdc;
+  --color-status-critical-ink: #a32424;
+}
