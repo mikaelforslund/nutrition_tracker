@@ -2,7 +2,7 @@
 
 import { Button, Dialog, Field, Input, StatusLabel, cn } from "@trackerx/ui";
 import { Pencil, Trash2 } from "lucide-react";
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useCallback, useEffect, useState, useTransition } from "react";
 import { deleteWorkout, saveWorkout, type ActionResult } from "@/app/actions";
 import { WORKOUT_TYPES, type Workout } from "@/lib/nutrition/workouts";
 import { formatDuration } from "@/lib/session-summary";
@@ -20,7 +20,7 @@ const longDate = (day: string) =>
     timeZone: "UTC",
   });
 
-function WorkoutDialog({
+export function WorkoutDialog({
   workout,
   today,
   asUserId,
@@ -164,6 +164,7 @@ export function WorkoutsPanel({
   asUserId?: string;
 }) {
   const [dialog, setDialog] = useState<{ workout: Workout | null } | null>(null);
+  const closeDialog = useCallback(() => setDialog(null), []);
 
   return (
     <div className="flex flex-col gap-2">
@@ -234,7 +235,7 @@ export function WorkoutsPanel({
           workout={dialog.workout}
           today={today}
           asUserId={asUserId}
-          onClose={() => setDialog(null)}
+          onClose={closeDialog}
         />
       ) : null}
     </div>

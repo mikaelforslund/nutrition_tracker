@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@trackerx/ui";
-import { CircleUserRound, Clock, House, Plus } from "lucide-react";
+import { ChartLine, CircleUserRound, Clock, House, Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -42,6 +42,7 @@ export function TabBar() {
           </span>
           Add Meal
         </button>
+        {tab("/m/progress", "Progress", ChartLine)}
         {tab("/m/account", "Account", CircleUserRound)}
       </nav>
       {capturing ? <CaptureSheet onClose={() => setCapturing(false)} /> : null}

@@ -1,18 +1,30 @@
+import { cn } from "@trackerx/ui";
 import { ChevronRight, Utensils } from "lucide-react";
 import Link from "next/link";
 import type { DayGroup } from "@/lib/nutrition/group-logs";
 
-export function MealCell({ meal }: { meal: DayGroup["meals"][number] }) {
+export function MealCell({
+  meal,
+  compact = false,
+}: {
+  meal: DayGroup["meals"][number];
+  compact?: boolean;
+}) {
+  const image = compact ? "size-9" : "size-12";
+
   return (
     <Link
       href={`/m/meals/${meal.id}`}
       prefetch={false}
-      className="flex items-center gap-3 px-4 py-2.5 active:bg-ios-fill"
+      className={cn(
+        "flex items-center gap-3 px-4 active:bg-ios-fill",
+        compact ? "py-1.5 text-[15px]" : "py-2.5",
+      )}
     >
       {meal.imageUrl ? (
-        <img src={meal.imageUrl} alt="" loading="lazy" className="size-12 shrink-0 rounded-lg object-cover" />
+        <img src={meal.imageUrl} alt="" loading="lazy" className={cn(image, "shrink-0 rounded-lg object-cover")} />
       ) : (
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-ios-fill">
+        <span className={cn(image, "flex shrink-0 items-center justify-center rounded-lg bg-ios-fill")}>
           <Utensils aria-hidden className="size-5 text-ios-secondary" />
         </span>
       )}

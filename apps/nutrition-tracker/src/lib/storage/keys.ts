@@ -31,6 +31,14 @@ export function ownUploadKey(url: string, userId: string): string | null {
   return parseUploadKey(key)?.ownerId === userId ? key : null;
 }
 
+/** Returns the storage key behind any upload URL, whoever owns it. */
+export function uploadKey(url: string): string | null {
+  if (!url.startsWith(UPLOAD_PREFIX)) return null;
+
+  const key = url.slice(UPLOAD_PREFIX.length);
+  return parseUploadKey(key) ? key : null;
+}
+
 export function isOwnUploadUrl(url: string, userId: string): boolean {
   return ownUploadKey(url, userId) !== null;
 }

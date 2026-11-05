@@ -1,10 +1,11 @@
 "use client";
 
-import { Card, CardContent, CardDescription, cn } from "@trackerx/ui";
-import { ChevronRight, Pencil, Trash2, Trophy, Utensils } from "lucide-react";
+import { Button, Card, CardContent, CardDescription, cn } from "@trackerx/ui";
+import { ChevronRight, ClipboardPaste, Copy, Pencil, Trash2, Trophy, Utensils, X } from "lucide-react";
 import { useCallback, useState, useTransition, type ReactNode } from "react";
-import { deleteFoodLogs } from "@/app/actions";
+import { deleteFoodLogs, pasteFoodLog } from "@/app/actions";
 import { MealEditDialog } from "@/components/meal-edit-dialog";
+import { useCopiedMeal, type CopiedMeal } from "@/components/use-copied-meal";
 import type { DayGroup } from "@/lib/nutrition/group-logs";
 
 const NUMERIC_CELL = "px-2 py-2.5 text-right whitespace-nowrap tabular-nums";
@@ -109,18 +110,29 @@ function DeleteControl({
   );
 }
 
+const ROW_ICON =
+  "rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-50";
+
 function DayRows({
   group,
   expanded,
   onToggle,
   onEdit,
   asUserId,
+  copied,
+  onCopy,
+  onPaste,
+  isPasting,
 }: {
   group: DayGroup;
   expanded: boolean;
   onToggle: () => void;
   onEdit: (meal: DayGroup["meals"][number]) => void;
   asUserId?: string;
+  copied: CopiedMeal | null;
+  onCopy: (meal: CopiedMeal) => void;
+  onPaste: (day: string) => void;
+  isPasting: boolean;
 }) {
   const count = `${group.meals.length} ${group.meals.length === 1 ? "meal" : "meals"}`;
 
@@ -151,12 +163,26 @@ function DayRows({
         <td className={cn(MACRO_CELL, "font-medium")}>{group.fatG} g</td>
         <td className={NOTES_COLUMN} />
         <td className="py-1 pl-2 text-right">
-          <DeleteControl
-            ids={group.meals.map((meal) => meal.id)}
-            name={`all meals from ${group.label}`}
-            asUserId={asUserId}
-            confirmDetail={count}
-          />
+          <div className="flex items-center justify-end gap-0.5">
+            {copied ? (
+              <button
+                type="button"
+                aria-label={`Paste ${copied.foodName} into ${group.label}`}
+                title={`Paste into ${group.label}`}
+                disabled={isPasting}
+                onClick={() => onPaste(group.day)}
+                className={ROW_ICON}
+              >
+                <ClipboardPaste aria-hidden className="size-4" />
+              </button>
+            ) : null}
+            <DeleteControl
+              ids={group.meals.map((meal) => meal.id)}
+              name={`all meals from ${group.label}`}
+              asUserId={asUserId}
+              confirmDetail={count}
+            />
+          </div>
         </td>
         <td className="py-1 pl-2 text-right sm:pl-3">
           <GoalBadge group={group} />
@@ -205,6 +231,15 @@ function DayRows({
                 <div className="flex items-center justify-end gap-0.5">
                   <button
                     type="button"
+                    aria-label={`Copy ${meal.foodName}`}
+                    title="Copy"
+                    onClick={() => onCopy({ id: meal.id, foodName: meal.foodName })}
+                    className={cn(ROW_ICON, copied?.id === meal.id && "text-accent")}
+                  >
+                    <Copy aria-hidden className="size-4" />
+                  </button>
+                  <button
+                    type="button"
                     aria-label={`Edit ${meal.foodName}`}
                     title="Edit"
                     onClick={() => onEdit(meal)}
@@ -227,12 +262,14 @@ export function FoodLogTree({
   groups,
   windowDays,
   asUserId,
+  today,
   aboveList,
   workouts,
 }: {
   groups: DayGroup[];
   windowDays: number;
   asUserId?: string;
+  today: string;
   /** Shown between the panel's heading and the list. */
   aboveList?: ReactNode;
   /** Content of the Workouts tab. */
@@ -245,6 +282,23 @@ export function FoodLogTree({
   const newestDay = groups[0]?.day;
 
   const [tab, setTab] = useState<"meals" | "workouts">("meals");
+  const { copied, copy, clear } = useCopiedMeal();
+  const [pasteError, setPasteError] = useState<string | null>(null);
+  const [isPasting, startPasting] = useTransition();
+
+  function paste(day: string, { clearAfter = false } = {}) {
+    if (!copied) return;
+
+    setPasteError(null);
+    startPasting(async () => {
+      const result = await pasteFoodLog(copied.id, day, asUserId).catch(() => null);
+      if (result?.status !== "saved") {
+        setPasteError(result?.message ?? "The meal couldn't be pasted.");
+      } else if (clearAfter) {
+        clear();
+      }
+    });
+  }
   const [editingMeal, setEditingMeal] = useState<DayGroup["meals"][number] | null>(null);
   const closeEditor = useCallback(() => setEditingMeal(null), []);
 
@@ -287,6 +341,30 @@ export function FoodLogTree({
         {aboveList}
       </div>
       <CardContent>
+        {tab === "meals" && copied ? (
+          <div
+            role="status"
+            className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-xs text-zinc-700"
+          >
+            <span className="min-w-0 truncate">
+              Copied <strong className="font-medium text-zinc-950">{copied.foodName}</strong>
+            </span>
+            <span className="flex items-center gap-1">
+              {pasteError ? <span className="text-status-critical-ink">{pasteError}</span> : null}
+              <Button
+                variant="secondary"
+                disabled={isPasting}
+                onClick={() => paste(today, { clearAfter: true })}
+                className="h-7 px-2 text-xs"
+              >
+                {isPasting ? "Pasting" : "Paste to today"}
+              </Button>
+              <button type="button" aria-label="Clear copied meal" onClick={clear} className={ROW_ICON}>
+                <X aria-hidden className="size-4" />
+              </button>
+            </span>
+          </div>
+        ) : null}
         {tab === "workouts" ? workouts : groups.length === 0 ? (
           <p className="py-6 text-center text-sm text-zinc-500">
             Nothing logged yet. Add a photo to log your first meal.
@@ -332,6 +410,13 @@ export function FoodLogTree({
                   onToggle={() => toggle(group.day)}
                   onEdit={setEditingMeal}
                   asUserId={asUserId}
+                  copied={copied}
+                  onCopy={(meal) => {
+                    setPasteError(null);
+                    copy(meal);
+                  }}
+                  onPaste={(day) => paste(day)}
+                  isPasting={isPasting}
                 />
               ))}
             </table>

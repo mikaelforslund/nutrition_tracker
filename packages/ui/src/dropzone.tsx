@@ -1,7 +1,7 @@
 "use client";
 
 import { ImageUp } from "lucide-react";
-import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type MouseEvent, type ReactNode } from "react";
 import { cn } from "./cn";
 
 export type DropzoneProps = {
@@ -9,7 +9,7 @@ export type DropzoneProps = {
   onReject?: (message: string) => void;
   accept: readonly string[];
   maxBytes: number;
-  title?: string;
+  title?: ReactNode;
   hint?: string;
   disabled?: boolean;
   /** Also accepts images pasted with Cmd/Ctrl+V, or read with Cmd/Ctrl+click. */

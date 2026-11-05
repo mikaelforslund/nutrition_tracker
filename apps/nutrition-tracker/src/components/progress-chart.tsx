@@ -21,9 +21,13 @@ const MARGIN = { left: 38, right: 14, top: 10, bottom: 20 };
 const END_LABEL_MARGIN = 54;
 const MIN_LABEL_GAP = 11;
 
-const ACCENT = "var(--color-accent)";
-/** Validated categorical slots, in their fixed order. */
-const MACRO_COLORS = { protein: "#2a78d6", carbs: "#eb6834", fat: "#1baf7a" };
+const LINE_COLOR = "var(--chart-line)";
+/** Validated categorical slots, in their fixed order. Dark values are set in globals.css. */
+const MACRO_COLORS = {
+  protein: "var(--chart-series-1)",
+  carbs: "var(--chart-series-2)",
+  fat: "var(--chart-series-3)",
+};
 
 const COLLAPSED_KEY = "trackerx.progress-collapsed";
 const COLLAPSE_EVENT = "trackerx:progress-collapse";
@@ -36,6 +40,20 @@ const shortDate = (day: string) =>
   });
 
 type Series = { label: string; color: string; data: ChartPoint[] };
+
+export const singleSeries = (label: string, data: ChartPoint[]): Series[] => [
+  { label, color: LINE_COLOR, data },
+];
+
+export const macroSeries = (
+  protein: ChartPoint[],
+  carbs: ChartPoint[],
+  fat: ChartPoint[],
+): Series[] => [
+  { label: "Protein", color: MACRO_COLORS.protein, data: protein },
+  { label: "Carbs", color: MACRO_COLORS.carbs, data: carbs },
+  { label: "Fat", color: MACRO_COLORS.fat, data: fat },
+];
 
 function useElementWidth() {
   const ref = useRef<HTMLDivElement>(null);
@@ -55,7 +73,7 @@ function useElementWidth() {
   return [ref, width] as const;
 }
 
-function LineChart({
+export function LineChart({
   title,
   unit,
   series,
@@ -131,9 +149,9 @@ function LineChart({
   return (
     <figure className="min-w-0">
       <figcaption className="mb-1 flex flex-wrap items-center justify-between gap-x-3 text-xs">
-        <span className="font-medium text-zinc-700">{title}</span>
+        <span className="font-medium text-(--chart-ink)">{title}</span>
         {multi ? (
-          <span className="flex items-center gap-3 text-zinc-600">
+          <span className="flex items-center gap-3 text-(--chart-label)">
             {series.map((item) => (
               <span key={item.label} className="flex items-center gap-1">
                 <span aria-hidden className="h-0.5 w-3 rounded-full" style={{ backgroundColor: item.color }} />
@@ -156,15 +174,18 @@ function LineChart({
               .join(", ")}`}
             width={size.width}
             height={HEIGHT}
-            className="block touch-none"
+            className="block touch-pan-y"
             onPointerMove={handleMove}
             onPointerDown={handleMove}
-            onPointerLeave={() => setHoverX(null)}
+            onPointerLeave={(event) => {
+              // On touch the value stays up after a tap, until the next one.
+              if (event.pointerType === "mouse") setHoverX(null);
+            }}
           >
             {chart.ticks.map((tick) => (
               <g key={tick.value}>
-                <line x1={size.left} x2={size.width - size.right} y1={tick.y} y2={tick.y} className="stroke-zinc-100" />
-                <text x={size.left - 6} y={tick.y + 3} textAnchor="end" className="fill-zinc-500 text-[10px]">
+                <line x1={size.left} x2={size.width - size.right} y1={tick.y} y2={tick.y} className="stroke-(--chart-grid)" />
+                <text x={size.left - 6} y={tick.y + 3} textAnchor="end" className="fill-(--chart-label) text-[10px]">
                   {tick.value.toLocaleString("en-US")}
                 </text>
               </g>
@@ -178,24 +199,13 @@ function LineChart({
                   y1={chart.referenceY}
                   y2={chart.referenceY}
                   strokeDasharray="4 3"
-                  className="stroke-zinc-400"
+                  className="stroke-(--chart-rule)"
                 />
-                {/* The white outline keeps the label readable where a line crosses it. */}
-                <text
-                  x={size.width - size.right}
-                  y={chart.referenceY - 3}
-                  textAnchor="end"
-                  paintOrder="stroke"
-                  strokeWidth={3}
-                  className="fill-zinc-600 stroke-white text-[10px]"
-                >
-                  {referenceLabel} {format(reference)}
-                </text>
               </g>
             ) : null}
 
             {chart.series.map((line, index) => {
-              const color = series[index]?.color ?? ACCENT;
+              const color = series[index]?.color ?? LINE_COLOR;
               return (
                 <g key={series[index]?.label}>
                   <path d={line.path} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
@@ -206,32 +216,46 @@ function LineChart({
               );
             })}
 
+            {/* Drawn after the lines, with an outline, so it stays readable where one crosses it. */}
+            {chart.referenceY !== null && reference !== null ? (
+              <text
+                x={size.width - size.right}
+                y={chart.referenceY - 3}
+                textAnchor="end"
+                paintOrder="stroke"
+                strokeWidth={3}
+                className="fill-(--chart-label) stroke-(--chart-surface) text-[10px]"
+              >
+                {referenceLabel} {format(reference)}
+              </text>
+            ) : null}
+
             {endLabels.map((end) => (
-              <text key={end.label} x={size.width - size.right + 6} y={end.y + 3} className="fill-zinc-600 text-[10px]">
+              <text key={end.label} x={size.width - size.right + 6} y={end.y + 3} className="fill-(--chart-label) text-[10px]">
                 {end.label}
               </text>
             ))}
 
             {hovered ? (
               <g>
-                <line x1={hovered.x} x2={hovered.x} y1={size.top} y2={HEIGHT - size.bottom} className="stroke-zinc-300" />
+                <line x1={hovered.x} x2={hovered.x} y1={size.top} y2={HEIGHT - size.bottom} className="stroke-(--chart-rule)" />
                 {hoveredRows.map(({ label, color, point }) => (
-                  <circle key={label} cx={point.x} cy={point.y} r={4.5} fill={color} strokeWidth={2} className="stroke-white" />
+                  <circle key={label} cx={point.x} cy={point.y} r={4.5} fill={color} strokeWidth={2} className="stroke-(--chart-surface)" />
                 ))}
               </g>
             ) : null}
 
-            <text x={size.left} y={HEIGHT - 5} className="fill-zinc-500 text-[10px]">
+            <text x={size.left} y={HEIGHT - 5} className="fill-(--chart-label) text-[10px]">
               {shortDate(first.day)}
             </text>
             {firstSeries.length > 1 ? (
-              <text x={size.width - size.right} y={HEIGHT - 5} textAnchor="end" className="fill-zinc-500 text-[10px]">
+              <text x={size.width - size.right} y={HEIGHT - 5} textAnchor="end" className="fill-(--chart-label) text-[10px]">
                 {shortDate(last.day)}
               </text>
             ) : null}
           </svg>
         ) : (
-          <p className="flex items-center justify-center text-xs text-zinc-500" style={{ height: HEIGHT }}>
+          <p className="flex items-center justify-center text-center text-xs text-(--chart-label)" style={{ height: HEIGHT }}>
             {empty}
           </p>
         )}
@@ -239,19 +263,19 @@ function LineChart({
         {hovered ? (
           <div
             role="status"
-            className="pointer-events-none absolute top-0 -translate-x-1/2 rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs whitespace-nowrap shadow-sm"
+            className="pointer-events-none absolute top-0 -translate-x-1/2 rounded-md border border-(--chart-grid) bg-(--chart-surface) px-2 py-1 text-xs whitespace-nowrap shadow-sm"
             style={{ left: `${Math.min(Math.max((hovered.x / size.width) * 100, 18), 82)}%` }}
           >
-            <p className="text-zinc-500">{shortDate(hovered.day)}</p>
+            <p className="text-(--chart-label)">{shortDate(hovered.day)}</p>
             {hoveredRows.map(({ label, color, point }) => (
               <p key={label} className="flex items-center gap-1.5">
                 {multi ? (
                   <>
                     <span aria-hidden className="size-2 rounded-full" style={{ backgroundColor: color }} />
-                    <span className="text-zinc-600">{label}</span>
+                    <span className="text-(--chart-label)">{label}</span>
                   </>
                 ) : null}
-                <span className="ml-auto pl-2 font-medium text-zinc-950">{format(point.value)}</span>
+                <span className="ml-auto pl-2 font-medium text-(--chart-ink)">{format(point.value)}</span>
               </p>
             ))}
           </div>
@@ -353,16 +377,9 @@ export function ProgressChart({
   const [collapsed, toggleCollapsed] = useCollapsed();
   const [view, setView] = useState<"weight" | "calories">("weight");
 
-  const weightSeries = useMemo(() => [{ label: "Weight", color: ACCENT, data: weights }], [weights]);
-  const calorieSeries = useMemo(() => [{ label: "Calories", color: ACCENT, data: calories }], [calories]);
-  const macroSeries = useMemo(
-    () => [
-      { label: "Protein", color: MACRO_COLORS.protein, data: protein },
-      { label: "Carbs", color: MACRO_COLORS.carbs, data: carbs },
-      { label: "Fat", color: MACRO_COLORS.fat, data: fat },
-    ],
-    [protein, carbs, fat],
-  );
+  const weightSeries = useMemo(() => singleSeries("Weight", weights), [weights]);
+  const calorieSeries = useMemo(() => singleSeries("Calories", calories), [calories]);
+  const macroLines = useMemo(() => macroSeries(protein, carbs, fat), [protein, carbs, fat]);
 
   return (
     <section aria-label="Progress" className="min-w-0 rounded-lg border border-zinc-200 p-2.5">
@@ -428,7 +445,7 @@ export function ProgressChart({
               <LineChart
                 title="Protein, carbs, and fat"
                 unit="g"
-                series={macroSeries}
+                series={macroLines}
                 empty="Log a meal to start the chart."
               />
             </div>

@@ -182,7 +182,7 @@ export default async function DashboardPage({
 
       <div className="grid gap-3 md:grid-cols-5">
         <div className="min-w-0 md:col-span-2">
-          <FoodCapture key={user.id} asUserId={asUserId} />
+          <FoodCapture key={user.id} asUserId={asUserId} today={today} />
         </div>
         <div className="min-w-0 md:col-span-3">
           <ProjectionCard projection={projection} profile={profile} goalsHref={goalsHref} />
@@ -194,6 +194,7 @@ export default async function DashboardPage({
         groups={groups}
         windowDays={MEAL_WINDOW_DAYS}
         asUserId={asUserId}
+        today={today}
         workouts={<WorkoutsPanel workouts={workouts} today={today} asUserId={asUserId} />}
         aboveList={
           <ProgressChart

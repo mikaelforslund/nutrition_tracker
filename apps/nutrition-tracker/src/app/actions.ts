@@ -8,7 +8,9 @@ import {
   editFoodLog,
   editWorkout,
   insertFoodLog,
+  insertMealCopy,
   insertWorkout,
+  readMealSource,
   recordWeight,
   removeFoodLogs,
   removeWorkout,
@@ -22,7 +24,14 @@ import {
 } from "@/lib/nutrition/schemas";
 import { workoutInputSchema } from "@/lib/nutrition/workouts";
 import { getStorage } from "@/lib/storage";
-import { isOwnUploadUrl, ownUploadKey } from "@/lib/storage/keys";
+import {
+  createUploadKey,
+  isOwnUploadUrl,
+  ownUploadKey,
+  parseUploadKey,
+  uploadKey,
+  uploadUrl,
+} from "@/lib/storage/keys";
 import { isAllowedImageUrl } from "@/lib/vision/image";
 
 export type ActionResult = { status: "idle" | "saved" | "error"; message?: string };
@@ -119,6 +128,43 @@ export async function deleteWorkout(id: unknown, asUserId?: string): Promise<Act
   if (!parsed.success) return { status: "error", message: "That workout couldn't be found." };
 
   await removeWorkout(user.id, parsed.data);
+  revalidatePath("/", "layout");
+  return { status: "saved" };
+}
+
+const pasteSchema = z.object({ id: z.uuid(), day: z.iso.date() });
+
+/** The copy gets its own file, so deleting either meal can't break the other's photo. */
+async function copyPhoto(imageUrl: string | null, userId: string): Promise<string | null> {
+  const key = imageUrl ? uploadKey(imageUrl) : null;
+  if (!key) return imageUrl;
+
+  const storage = getStorage();
+  const bytes = await storage.get(key);
+  const parsed = parseUploadKey(key);
+  if (!bytes || !parsed) return null;
+
+  const extension = key.split(".").pop() as "jpg" | "png" | "webp";
+  const newKey = createUploadKey(userId, extension);
+  await storage.put(newKey, bytes, parsed.contentType);
+  return uploadUrl(newKey);
+}
+
+export async function pasteFoodLog(
+  id: unknown,
+  day: unknown,
+  asUserId?: string,
+): Promise<ActionResult> {
+  const user = await getActingUser(asUserId);
+  if (!user) return { status: "error", message: "Sign in to add meals." };
+
+  const parsed = pasteSchema.safeParse({ id, day });
+  if (!parsed.success) return { status: "error", message: "That meal can't be pasted." };
+
+  const meal = await readMealSource(user.id, parsed.data.id);
+  if (!meal) return { status: "error", message: "The copied meal no longer exists." };
+
+  await insertMealCopy(user.id, meal, await copyPhoto(meal.imageUrl, user.id), parsed.data.day);
   revalidatePath("/", "layout");
   return { status: "saved" };
 }

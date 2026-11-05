@@ -13,8 +13,10 @@ import {
   StatusLabel,
 } from "@trackerx/ui";
 import { LoaderCircle } from "lucide-react";
-import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { saveFoodLog } from "@/app/actions";
+import { ManualMealDialog } from "@/components/manual-meal-dialog";
+import { WorkoutDialog } from "@/components/workouts-panel";
 import { caloriesFromMacros } from "@/lib/nutrition/calories";
 import { analyzeImage, type MealDraft as Draft } from "@/lib/vision/analyze-client";
 import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_BYTES } from "@/lib/vision/contract";
@@ -27,11 +29,13 @@ const MACRO_FIELDS = [
   { key: "fatG", label: "Fat (g)", step: "0.1" },
 ] as const;
 
-export function FoodCapture({ asUserId }: { asUserId?: string }) {
+export function FoodCapture({ asUserId, today }: { asUserId?: string; today: string }) {
   const [stage, setStage] = useState<Stage>({ name: "idle" });
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSaving, startSaving] = useTransition();
+  const [dialog, setDialog] = useState<"meal" | "workout" | null>(null);
+  const closeDialog = useCallback(() => setDialog(null), []);
   const requestRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -101,8 +105,16 @@ export function FoodCapture({ asUserId }: { asUserId?: string }) {
 
   return (
     <Card className="h-full">
-      <CardHeader className="p-3.5 pb-0">
-        <CardTitle>Log a meal</CardTitle>
+      <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 p-3.5 pb-0">
+        <CardTitle>Log a meal/workout</CardTitle>
+        <div className="flex gap-1.5">
+          <Button variant="secondary" onClick={() => setDialog("meal")} className="h-7 px-2 text-xs">
+            Enter meal
+          </Button>
+          <Button variant="secondary" onClick={() => setDialog("workout")} className="h-7 px-2 text-xs">
+            Add workout
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 p-3.5 pt-2">
         {stage.name === "idle" ? (
@@ -111,7 +123,11 @@ export function FoodCapture({ asUserId }: { asUserId?: string }) {
             maxBytes={MAX_IMAGE_BYTES}
             onFile={handleFile}
             onReject={setError}
-            title="Drop a food photo, or click to browse"
+            title={
+              <>
+                Drop a <strong className="font-bold">food</strong> photo, or click to browse
+              </>
+            }
             hint="Paste with ⌘V or ⌘-click. JPEG, PNG, or WebP up to 8 MB"
             allowPaste
             className="gap-1 py-3"
@@ -189,6 +205,10 @@ export function FoodCapture({ asUserId }: { asUserId?: string }) {
           </p>
         ) : null}
       </CardContent>
+      {dialog === "meal" ? <ManualMealDialog asUserId={asUserId} onClose={closeDialog} /> : null}
+      {dialog === "workout" ? (
+        <WorkoutDialog workout={null} today={today} asUserId={asUserId} onClose={closeDialog} />
+      ) : null}
     </Card>
   );
 }

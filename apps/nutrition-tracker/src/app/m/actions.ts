@@ -5,6 +5,9 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { describeDevice } from "@/lib/device-label";
+import { requireMobileUser } from "@/lib/mobile-session";
+import { monthPattern, type HistoryDayDetail, type HistoryMonth } from "@/lib/nutrition/history";
+import { getHistoryDay, getHistoryMonth } from "@/lib/nutrition/repository";
 import { getEnv } from "@/lib/env";
 import {
   DEVICE_COOKIE,
@@ -62,6 +65,20 @@ export async function addPerson(_previous: SignInState, form: FormData): Promise
   const timezone = String(form.get("timezone") ?? "UTC");
   const session = await startSessionForName(name.data, timezone, await currentDevice());
   return enter(session.sessionId, session.userId);
+}
+
+export async function loadHistoryMonth(month: unknown): Promise<HistoryMonth | null> {
+  const user = await requireMobileUser();
+  if (typeof month !== "string" || !monthPattern.test(month)) return null;
+
+  return getHistoryMonth(user.id, month);
+}
+
+export async function loadHistoryDay(day: unknown): Promise<HistoryDayDetail | null> {
+  const user = await requireMobileUser();
+
+  const parsed = z.iso.date().safeParse(day);
+  return parsed.success ? getHistoryDay(user.id, parsed.data) : null;
 }
 
 export async function switchPerson(): Promise<void> {

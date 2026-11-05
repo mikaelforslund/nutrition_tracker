@@ -1,8 +1,10 @@
 import "server-only";
 import type { TransactionSql } from "postgres";
-import { withUser } from "../db";
+import { getSql, withUser } from "../db";
+import { getEnv } from "../env";
 import type { ChartPoint } from "./chart";
-import type { MealRow } from "./group-logs";
+import { goalScore, groupLogsByDay, type DayGroup, type MealRow } from "./group-logs";
+import type { HistoryDay, HistoryDayDetail, HistoryMonth } from "./history";
 import type { FoodLogInput, FoodLogUpdate, ProfileInput } from "./schemas";
 import type { Workout, WorkoutInput } from "./workouts";
 
@@ -193,6 +195,201 @@ export async function insertFoodLog(userId: string, input: FoodLogInput): Promis
       values (
         ${userId}, ${input.imageUrl}, ${input.foodName},
         ${input.proteinG}, ${input.carbsG}, ${input.fatG}
+      )
+    `;
+  });
+}
+
+const MEAL_COLUMNS = (tx: TransactionSql, zone: string) => tx`
+  id,
+  to_char(logged_at at time zone ${zone}, 'YYYY-MM-DD') as day,
+  image_url as "imageUrl",
+  food_name as "foodName",
+  calories,
+  protein_g::float8 as "proteinG",
+  carbs_g::float8 as "carbsG",
+  fat_g::float8 as "fatG",
+  notes,
+  logged_at as "loggedAt",
+  to_char(logged_at at time zone ${zone}, 'YYYY-MM-DD"T"HH24:MI') as "loggedAtLocal"
+`;
+
+async function localToday(tx: TransactionSql, zone: string): Promise<string> {
+  const [clock] = await tx<{ today: string }[]>`
+    select to_char(now() at time zone ${zone}, 'YYYY-MM-DD') as today
+  `;
+  if (!clock) throw new Error("Clock query returned no rows");
+  return clock.today;
+}
+
+/**
+ * One month of daily summaries, including days with only a workout. With no month
+ * given, starts from the most recent month that has anything logged.
+ */
+export async function getHistoryMonth(userId: string, month: string | null): Promise<HistoryMonth> {
+  return withUser(userId, async (tx) => {
+    const { timezone, targetCalories } = await loadProfile(tx, userId);
+
+    const summaries = await tx<(Omit<HistoryDay, "goalScore"> & { monthKey: string })[]>`
+      with meals as (
+        select
+          (logged_at at time zone ${timezone})::date as on_day,
+          count(*)::int as meals,
+          sum(calories)::int as calories,
+          round(sum(protein_g), 1)::float8 as protein,
+          round(sum(carbs_g), 1)::float8 as carbs,
+          round(sum(fat_g), 1)::float8 as fat
+        from app_nutrition.food_logs
+        where user_id = ${userId}
+        group by 1
+      ),
+      burned as (
+        select worked_out_on as on_day, sum(calories_burned)::int as burned
+        from app_nutrition.workouts
+        where user_id = ${userId}
+        group by 1
+      )
+      select
+        to_char(on_day, 'YYYY-MM-DD') as day,
+        to_char(on_day, 'YYYY-MM') as "monthKey",
+        coalesce(meals, 0) as meals,
+        coalesce(calories, 0) as calories,
+        coalesce(protein, 0) as "proteinG",
+        coalesce(carbs, 0) as "carbsG",
+        coalesce(fat, 0) as "fatG",
+        coalesce(burned, 0) as burned
+      from meals full join burned using (on_day)
+      order by on_day desc
+    `;
+
+    const selected = month ?? summaries[0]?.monthKey ?? (await localToday(tx, timezone)).slice(0, 7);
+
+    return {
+      month: selected,
+      days: summaries
+        .filter((day) => day.monthKey === selected)
+        .map(({ monthKey: _monthKey, ...day }) => ({
+          ...day,
+          goalScore: day.meals > 0 ? goalScore(day.calories - day.burned, targetCalories) : null,
+        })),
+      earlierMonth: summaries.find((day) => day.monthKey < selected)?.monthKey ?? null,
+    };
+  });
+}
+
+/** Everything logged on one day, loaded when that day is opened. */
+export async function getHistoryDay(userId: string, day: string): Promise<HistoryDayDetail> {
+  return withUser(userId, async (tx) => {
+    const { timezone, targetCalories } = await loadProfile(tx, userId);
+    const today = await localToday(tx, timezone);
+
+    const meals = await tx<MealRow[]>`
+      select ${MEAL_COLUMNS(tx, timezone)}
+      from app_nutrition.food_logs
+      where user_id = ${userId}
+        and (logged_at at time zone ${timezone})::date = ${day}::date
+      order by logged_at desc
+    `;
+
+    const workouts = await tx<Workout[]>`
+      select
+        id,
+        to_char(worked_out_on, 'YYYY-MM-DD') as day,
+        workout_type as "workoutType",
+        duration_minutes as "durationMinutes",
+        calories_burned as "caloriesBurned"
+      from app_nutrition.workouts
+      where user_id = ${userId} and worked_out_on = ${day}::date
+      order by created_at desc
+    `;
+
+    const [group] = groupLogsByDay([...meals], today, timezone, targetCalories);
+    return { meals: group?.meals ?? [], workouts: [...workouts] };
+  });
+}
+
+/** One meal, however old, with what its page needs. */
+export async function getMealView(
+  userId: string,
+  id: string,
+): Promise<{ meal: DayGroup["meals"][number]; dayLabel: string; today: string } | null> {
+  return withUser(userId, async (tx) => {
+    const { timezone, targetCalories } = await loadProfile(tx, userId);
+    const today = await localToday(tx, timezone);
+
+    const rows = await tx<MealRow[]>`
+      select ${MEAL_COLUMNS(tx, timezone)}
+      from app_nutrition.food_logs
+      where id = ${id} and user_id = ${userId}
+    `;
+
+    const [group] = groupLogsByDay([...rows], today, timezone, targetCalories);
+    const meal = group?.meals[0];
+    return group && meal ? { meal, dayLabel: group.label, today } : null;
+  });
+}
+
+export type MealSource = {
+  foodName: string;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  notes: string | null;
+  imageUrl: string | null;
+  loggedAt: Date;
+};
+
+/**
+ * Reads a meal to copy. With mock auth it can belong to anyone, because the
+ * dashboard works across people. Otherwise row level security limits it to the user.
+ */
+export async function readMealSource(userId: string, id: string): Promise<MealSource | null> {
+  const read = async (tx: TransactionSql) => {
+    const [meal] = await tx<MealSource[]>`
+      select
+        food_name as "foodName",
+        protein_g::float8 as "proteinG",
+        carbs_g::float8 as "carbsG",
+        fat_g::float8 as "fatG",
+        notes,
+        image_url as "imageUrl",
+        logged_at as "loggedAt"
+      from app_nutrition.food_logs
+      where id = ${id}
+    `;
+    return meal ?? null;
+  };
+
+  const meal =
+    getEnv().AUTH_MODE === "mock" ? await getSql().begin(read) : await withUser(userId, read);
+
+  return meal as MealSource | null;
+}
+
+/**
+ * Adds a copy of a meal to a day: right now for today, otherwise at the same time of
+ * day in the person's own timezone, so it can't slip onto a neighbouring day.
+ */
+export async function insertMealCopy(
+  userId: string,
+  meal: MealSource,
+  imageUrl: string | null,
+  day: string,
+): Promise<void> {
+  await withUser(userId, async (tx) => {
+    const { timezone } = await loadProfile(tx, userId);
+
+    await tx`
+      insert into app_nutrition.food_logs
+        (user_id, image_url, food_name, protein_g, carbs_g, fat_g, notes, logged_at)
+      values (
+        ${userId}, ${imageUrl}, ${meal.foodName}, ${meal.proteinG}, ${meal.carbsG}, ${meal.fatG},
+        ${meal.notes},
+        case
+          when ${day}::date = (now() at time zone ${timezone})::date then now()
+          else (${day}::date + (${meal.loggedAt}::timestamptz at time zone ${timezone})::time)
+            at time zone ${timezone}
+        end
       )
     `;
   });

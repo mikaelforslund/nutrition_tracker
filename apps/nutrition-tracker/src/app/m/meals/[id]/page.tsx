@@ -1,21 +1,20 @@
 import { notFound } from "next/navigation";
+import { z } from "zod";
+import { AddToToday } from "@/components/mobile/add-to-today";
 import { BackButton } from "@/components/mobile/back-button";
 import { Row, Section } from "@/components/mobile/ios";
 import { requireMobileUser } from "@/lib/mobile-session";
-import { groupLogsByDay } from "@/lib/nutrition/group-logs";
-import { getDashboardData } from "@/lib/nutrition/repository";
+import { getMealView } from "@/lib/nutrition/repository";
 
 export const dynamic = "force-dynamic";
 
 export default async function MealPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireMobileUser();
   const { id } = await params;
-  const { profile, today, recentLogs } = await getDashboardData(user.id);
+  const view = z.uuid().safeParse(id).success ? await getMealView(user.id, id) : null;
+  if (!view) notFound();
 
-  const groups = groupLogsByDay(recentLogs, today, profile.timezone, profile.targetCalories);
-  const group = groups.find((item) => item.meals.some((meal) => meal.id === id));
-  const meal = group?.meals.find((item) => item.id === id);
-  if (!group || !meal) notFound();
+  const { meal, dayLabel, today } = view;
 
   return (
     <div className="pb-[calc(env(safe-area-inset-bottom)+2rem)]">
@@ -30,7 +29,7 @@ export default async function MealPage({ params }: { params: Promise<{ id: strin
       <header className="px-4 pt-4">
         <h1 className="text-[28px] leading-tight font-bold tracking-tight">{meal.foodName}</h1>
         <p className="text-ios-secondary">
-          {group.label}, {meal.time}
+          {dayLabel}, {meal.time}
         </p>
       </header>
 
@@ -46,6 +45,10 @@ export default async function MealPage({ params }: { params: Promise<{ id: strin
           <p className="px-4 py-2.5">{meal.notes}</p>
         </Section>
       ) : null}
+
+      <Section>
+        <AddToToday mealId={meal.id} today={today} />
+      </Section>
     </div>
   );
 }
