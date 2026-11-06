@@ -10,6 +10,8 @@ export function MobileCharts({
   protein,
   carbs,
   fat,
+  glasses,
+  targetGlasses,
   goalWeightKg,
   targetCalories,
 }: {
@@ -18,12 +20,15 @@ export function MobileCharts({
   protein: ChartPoint[];
   carbs: ChartPoint[];
   fat: ChartPoint[];
+  glasses: ChartPoint[];
+  targetGlasses: number;
   goalWeightKg: number | null;
   targetCalories: number;
 }) {
   const weightLine = useMemo(() => singleSeries("Weight", weights), [weights]);
   const calorieLine = useMemo(() => singleSeries("Calories", calories), [calories]);
   const macroLines = useMemo(() => macroSeries(protein, carbs, fat), [protein, carbs, fat]);
+  const glassesLine = useMemo(() => singleSeries("Glasses", glasses), [glasses]);
 
   return (
     <div className="mx-4 mt-2 flex flex-col gap-3 pb-4">
@@ -55,8 +60,20 @@ export function MobileCharts({
           empty="Log a meal to start this chart."
         />
       </div>
+      <div className="rounded-[10px] bg-ios-card p-3">
+        <LineChart
+          title="Glasses per day"
+          unit="glasses"
+          singularUnit="glass"
+          zeroBased
+          series={glassesLine}
+          reference={targetGlasses}
+          referenceLabel="Goal"
+          empty="Log a drink on the Today tab to start this chart."
+        />
+      </div>
       <p className="px-4 text-[13px] text-ios-secondary">
-        Tap a chart to see that day. Calories and macros cover the last 30 days.
+        Tap a chart to see that day. Calories, macros, and drinks cover the last 30 days.
       </p>
     </div>
   );

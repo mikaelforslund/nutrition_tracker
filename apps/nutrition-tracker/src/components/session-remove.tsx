@@ -1,15 +1,17 @@
 "use client";
 
-import { Button, Dialog } from "@trackerx/ui";
-import { X } from "lucide-react";
+import { Button, Dialog, Field, Select } from "@trackerx/ui";
+import { Ellipsis } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   deletePerson,
   endSessionNow,
+  movePerson,
   removeSessionFromList,
   type SessionActionResult,
 } from "@/app/session-actions";
+import type { SessionGroup } from "@/lib/session-summary";
 
 export function SessionRemove({
   sessionId,
@@ -19,6 +21,8 @@ export function SessionRemove({
   ended,
   canDeletePerson,
   selected,
+  groups,
+  groupId,
 }: {
   sessionId: string;
   userId: string;
@@ -27,6 +31,8 @@ export function SessionRemove({
   ended: boolean;
   canDeletePerson: boolean;
   selected: boolean;
+  groups: SessionGroup[];
+  groupId: string | null;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -51,11 +57,11 @@ export function SessionRemove({
       <button
         type="button"
         aria-label={`Manage ${name} on ${deviceLabel}`}
-        title="End or remove"
+        title="Group, end, or remove"
         onClick={() => setOpen(true)}
         className="rounded-md p-1 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-900 focus-visible:outline-2 focus-visible:outline-accent"
       >
-        <X aria-hidden className="size-3.5" />
+        <Ellipsis aria-hidden className="size-3.5" />
       </button>
       {open ? (
         <Dialog
@@ -65,6 +71,27 @@ export function SessionRemove({
           description={ended ? "This session has ended." : undefined}
         >
           <div className="flex flex-col gap-2 text-left">
+            {groups.length > 0 ? (
+              <div className="mb-2">
+                <Field label="Group" hint={`Applies to all of ${name}'s devices.`}>
+                  <Select
+                    value={groupId ?? ""}
+                    disabled={isPending}
+                    onChange={(event) => {
+                      const next = event.target.value || null;
+                      run(() => movePerson(userId, next), false);
+                    }}
+                  >
+                    <option value="">Ungrouped</option>
+                    {groups.map((group) => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+            ) : null}
             {ended ? null : (
               <>
                 <Button

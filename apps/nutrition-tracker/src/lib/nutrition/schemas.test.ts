@@ -6,6 +6,7 @@ const form = {
   targetProteinG: "130",
   targetCarbsG: "220",
   targetFatG: "65",
+  targetGlasses: "10",
   currentWeightKg: "80.5",
   goalWeightKg: "",
   timezone: "UTC",
@@ -40,6 +41,12 @@ describe("foodLogUpdateSchema", () => {
 });
 
 describe("profileInputSchema", () => {
+  it("keeps the drinks goal between 1 and 50 glasses", () => {
+    expect(profileInputSchema.parse(form).targetGlasses).toBe(10);
+    expect(profileInputSchema.safeParse({ ...form, targetGlasses: "0" }).success).toBe(false);
+    expect(profileInputSchema.safeParse({ ...form, targetGlasses: "51" }).success).toBe(false);
+  });
+
   it("turns blank optional fields into null rather than 0", () => {
     expect(profileInputSchema.parse(form)).toMatchObject({
       currentWeightKg: 80.5,

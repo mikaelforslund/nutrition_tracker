@@ -265,6 +265,7 @@ export function FoodLogTree({
   today,
   aboveList,
   workouts,
+  drinks,
 }: {
   groups: DayGroup[];
   windowDays: number;
@@ -274,6 +275,8 @@ export function FoodLogTree({
   aboveList?: ReactNode;
   /** Content of the Workouts tab. */
   workouts?: ReactNode;
+  /** Content of the Drinks tab. */
+  drinks?: ReactNode;
 }) {
   // Only the newest day is open by default, so the list stays short and scannable
   // and a new day's first meal is visible as soon as it arrives. This tracks the
@@ -281,7 +284,7 @@ export function FoodLogTree({
   const [toggled, setToggled] = useState<ReadonlySet<string>>(() => new Set());
   const newestDay = groups[0]?.day;
 
-  const [tab, setTab] = useState<"meals" | "workouts">("meals");
+  const [tab, setTab] = useState<"meals" | "workouts" | "drinks">("meals");
   const { copied, copy, clear } = useCopiedMeal();
   const [pasteError, setPasteError] = useState<string | null>(null);
   const [isPasting, startPasting] = useTransition();
@@ -315,7 +318,7 @@ export function FoodLogTree({
       <div className="flex flex-col gap-2.5 p-3.5 pb-0">
         <div>
           <div role="group" aria-label="Activity" className="flex gap-4 border-b border-zinc-200">
-            {(["meals", "workouts"] as const).map((option) => (
+            {(["meals", "workouts", "drinks"] as const).map((option) => (
               <button
                 key={option}
                 type="button"
@@ -335,7 +338,9 @@ export function FoodLogTree({
           <CardDescription className="pt-1.5">
             {tab === "meals"
               ? `Your last ${windowDays} days, grouped by day`
-              : "Workouts and the calories your watch or app reported"}
+              : tab === "workouts"
+                ? "Workouts and the calories your watch or app reported"
+                : "Glasses each day. Drinks add no calories, so log milk or sugar as a meal too"}
           </CardDescription>
         </div>
         {aboveList}
@@ -365,7 +370,7 @@ export function FoodLogTree({
             </span>
           </div>
         ) : null}
-        {tab === "workouts" ? workouts : groups.length === 0 ? (
+        {tab === "workouts" ? workouts : tab === "drinks" ? drinks : groups.length === 0 ? (
           <p className="py-6 text-center text-sm text-zinc-500">
             Nothing logged yet. Add a photo to log your first meal.
           </p>

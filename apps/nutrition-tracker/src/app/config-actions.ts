@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { getVisionSettings, saveVisionSettings } from "@/lib/app-settings";
 import { getEnv } from "@/lib/env";
 import {
@@ -8,6 +7,7 @@ import {
   normalizeBaseUrl,
   parseModelList,
   visionSettingsInputSchema,
+  type VisionProviderName,
 } from "@/lib/vision/settings";
 
 export type ConfigResult = { status: "idle" | "saved" | "error"; message?: string };
@@ -16,7 +16,23 @@ export type ConnectionResult =
   | { status: "ok"; models: string[] }
   | { status: "error"; message: string };
 
+/** What the settings form shows. The API key itself never goes to the browser. */
+export type VisionConfig = {
+  provider: VisionProviderName;
+  baseUrl: string;
+  model: string;
+  hasApiKey: boolean;
+};
+
 const CONNECTION_TIMEOUT_MS = 5000;
+
+// There's no real sign-in yet, so these can't be offered on a deployed site.
+export async function loadVisionConfig(): Promise<VisionConfig | null> {
+  if (getEnv().AUTH_MODE !== "mock") return null;
+
+  const { provider, baseUrl, model, apiKey } = await getVisionSettings();
+  return { provider, baseUrl, model, hasApiKey: Boolean(apiKey) };
+}
 
 export async function saveVisionConfig(_previous: ConfigResult, form: FormData): Promise<ConfigResult> {
   if (getEnv().AUTH_MODE !== "mock") return { status: "error", message: "Settings aren't available here." };
@@ -29,7 +45,6 @@ export async function saveVisionConfig(_previous: ConfigResult, form: FormData):
   }
 
   await saveVisionSettings(parsed.data);
-  revalidatePath("/config");
   return { status: "saved", message: "Settings saved." };
 }
 

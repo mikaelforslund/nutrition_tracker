@@ -41,6 +41,7 @@ export const profileInputSchema = z.object({
   targetProteinG: requiredInt(0, 1000),
   targetCarbsG: requiredInt(0, 2000),
   targetFatG: requiredInt(0, 1000),
+  targetGlasses: requiredInt(1, 50),
   currentWeightKg: optionalNumber(z.number().min(20).max(500)),
   goalWeightKg: optionalNumber(z.number().min(20).max(500)),
   timezone: z.string().min(1).max(100),

@@ -1,3 +1,4 @@
+import { glassesLabel } from "@/lib/nutrition/drinks";
 import { CircleUserRound } from "lucide-react";
 import { switchPerson } from "@/app/m/actions";
 import { LargeTitle, Row, Section } from "@/components/mobile/ios";
@@ -30,6 +31,7 @@ export default async function AccountPage() {
         <Row label="Protein" value={`${profile.targetProteinG} g`} />
         <Row label="Carbs" value={`${profile.targetCarbsG} g`} />
         <Row label="Fat" value={`${profile.targetFatG} g`} />
+        <Row label="Drinks" value={glassesLabel(profile.targetGlasses)} />
       </Section>
 
       <Section>

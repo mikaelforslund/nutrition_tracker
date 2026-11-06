@@ -3,6 +3,7 @@ import type { TransactionSql } from "postgres";
 import { getSql, withUser } from "../db";
 import { getEnv } from "../env";
 import type { ChartPoint } from "./chart";
+import { MAX_GLASSES, type DrinkChange, type DrinkLog } from "./drinks";
 import { goalScore, groupLogsByDay, type DayGroup, type MealRow } from "./group-logs";
 import type { HistoryDay, HistoryDayDetail, HistoryMonth } from "./history";
 import type { FoodLogInput, FoodLogUpdate, ProfileInput } from "./schemas";
@@ -14,6 +15,7 @@ export type Profile = {
   targetProteinG: number;
   targetCarbsG: number;
   targetFatG: number;
+  targetGlasses: number;
   currentWeightKg: number | null;
   goalWeightKg: number | null;
   timezone: string;
@@ -39,6 +41,8 @@ export type DashboardData = {
   weights: ChartPoint[];
   /** Recorded workouts, newest first. */
   workouts: Workout[];
+  /** Drinks from the last MEAL_WINDOW_DAYS days. */
+  drinks: DrinkLog[];
 };
 
 export const MEAL_WINDOW_DAYS = 30;
@@ -62,6 +66,7 @@ async function loadProfile(tx: TransactionSql, userId: string): Promise<Profile>
       target_protein_g as "targetProteinG",
       target_carbs_g as "targetCarbsG",
       target_fat_g as "targetFatG",
+      target_glasses as "targetGlasses",
       current_weight_kg::float8 as "currentWeightKg",
       goal_weight_kg::float8 as "goalWeightKg",
       timezone
@@ -88,7 +93,8 @@ export async function mealsVersion(tx: TransactionSql): Promise<string> {
       ),
       (select string_agg(p.updated_at::text, ',' order by p.user_id) from app_nutrition.user_profiles p),
       (select string_agg(w::text, ',' order by w.id) from app_nutrition.weight_logs w),
-      (select string_agg(k::text, ',' order by k.id) from app_nutrition.workouts k)
+      (select string_agg(k::text, ',' order by k.id) from app_nutrition.workouts k),
+      (select string_agg(d::text, ',' order by d.id) from app_nutrition.drink_logs d)
     )) as version
   `;
   return row?.version ?? "";
@@ -169,10 +175,21 @@ export function getDashboardData(userId: string): Promise<DashboardData> {
       limit ${WORKOUT_ROW_LIMIT}
     `;
 
+    const drinks = await tx<DrinkLog[]>`
+      select
+        to_char(drunk_on, 'YYYY-MM-DD') as day,
+        drink_type as "drinkType",
+        glasses
+      from app_nutrition.drink_logs
+      where user_id = ${userId}
+        and drunk_on >= ${clock.today}::date - ${MEAL_WINDOW_DAYS}::int
+    `;
+
     return {
       profile,
       weights: [...weights],
       workouts: [...workouts],
+      drinks: [...drinks],
       today: clock.today,
       todayTotals: days.find((day) => day.day === clock.today) ?? {
         day: clock.today,
@@ -223,7 +240,7 @@ async function localToday(tx: TransactionSql, zone: string): Promise<string> {
 }
 
 /**
- * One month of daily summaries, including days with only a workout. With no month
+ * One month of daily summaries, including days with only a workout or drinks. With no month
  * given, starts from the most recent month that has anything logged.
  */
 export async function getHistoryMonth(userId: string, month: string | null): Promise<HistoryMonth> {
@@ -248,6 +265,12 @@ export async function getHistoryMonth(userId: string, month: string | null): Pro
         from app_nutrition.workouts
         where user_id = ${userId}
         group by 1
+      ),
+      drinks as (
+        select drunk_on as on_day, sum(glasses)::int as glasses
+        from app_nutrition.drink_logs
+        where user_id = ${userId}
+        group by 1
       )
       select
         to_char(on_day, 'YYYY-MM-DD') as day,
@@ -257,8 +280,9 @@ export async function getHistoryMonth(userId: string, month: string | null): Pro
         coalesce(protein, 0) as "proteinG",
         coalesce(carbs, 0) as "carbsG",
         coalesce(fat, 0) as "fatG",
-        coalesce(burned, 0) as burned
-      from meals full join burned using (on_day)
+        coalesce(burned, 0) as burned,
+        coalesce(glasses, 0) as glasses
+      from meals full join burned using (on_day) full join drinks using (on_day)
       order by on_day desc
     `;
 
@@ -477,6 +501,34 @@ export async function removeWorkout(userId: string, id: string): Promise<void> {
   });
 }
 
+/** Adds or takes away one glass. A drink's row goes away when it reaches zero. */
+export async function changeDrinkGlasses(
+  userId: string,
+  { drinkType, day, change }: DrinkChange,
+): Promise<void> {
+  await withUser(userId, async (tx) => {
+    if (change > 0) {
+      await tx`
+        insert into app_nutrition.drink_logs (user_id, drunk_on, drink_type, glasses)
+        values (${userId}, ${day}, ${drinkType}, 1)
+        on conflict (user_id, drunk_on, drink_type)
+        do update set glasses = least(app_nutrition.drink_logs.glasses + 1, ${MAX_GLASSES}::int)
+      `;
+      return;
+    }
+
+    await tx`
+      delete from app_nutrition.drink_logs
+      where user_id = ${userId} and drunk_on = ${day} and drink_type = ${drinkType} and glasses <= 1
+    `;
+    await tx`
+      update app_nutrition.drink_logs
+      set glasses = glasses - 1
+      where user_id = ${userId} and drunk_on = ${day} and drink_type = ${drinkType}
+    `;
+  });
+}
+
 /** Deletes meals and returns the images they pointed to. */
 export async function removeFoodLogs(userId: string, ids: readonly string[]): Promise<string[]> {
   return withUser(userId, async (tx) => {
@@ -504,6 +556,7 @@ export async function updateProfile(userId: string, input: ProfileInput): Promis
         target_protein_g = ${input.targetProteinG},
         target_carbs_g = ${input.targetCarbsG},
         target_fat_g = ${input.targetFatG},
+        target_glasses = ${input.targetGlasses},
         current_weight_kg = ${input.currentWeightKg},
         goal_weight_kg = ${input.goalWeightKg},
         timezone = ${input.timezone}

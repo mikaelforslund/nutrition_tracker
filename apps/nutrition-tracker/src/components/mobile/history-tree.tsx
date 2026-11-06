@@ -4,6 +4,7 @@ import { cn } from "@trackerx/ui";
 import { ChevronRight, Dumbbell, Trophy } from "lucide-react";
 import { useState, useTransition } from "react";
 import { loadHistoryDay, loadHistoryMonth } from "@/app/m/actions";
+import { glassesLabel } from "@/lib/nutrition/drinks";
 import {
   monthLabel,
   monthSummary,
@@ -23,6 +24,7 @@ function DayDetail({ day, detail }: { day: HistoryDay; detail: HistoryDayDetail 
       <p className="px-4 pt-1 pb-1.5 text-[13px] text-ios-secondary">
         {day.proteinG} g protein, {day.carbsG} g carbs, {day.fatG} g fat
         {day.burned > 0 ? `, ${kcal(day.burned)} kcal burned` : ""}
+        {day.glasses > 0 ? `, ${glassesLabel(day.glasses)} of drinks` : ""}
       </p>
       {detail ? (
         <div className="divide-y divide-ios-separator">

@@ -35,12 +35,15 @@ export function buildChart(
   data: readonly (readonly ChartPoint[])[],
   reference: number | null,
   size: ChartSize,
+  /** For counts, which read best from zero. */
+  zeroBased = false,
 ): Chart | null {
   const all = data.flat();
   if (all.length === 0) return null;
 
   const values = all.map((point) => point.value);
   if (reference !== null) values.push(reference);
+  if (zeroBased) values.push(0);
 
   const rawMin = Math.min(...values);
   const rawMax = Math.max(...values);

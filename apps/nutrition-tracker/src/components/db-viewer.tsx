@@ -229,7 +229,7 @@ export function DbViewer({ revision, asUserId }: { revision: string; asUserId?: 
 
         <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-4">
           <p className="text-xs text-zinc-500">
-            Shows the selected person&apos;s rows. Click a dark value to edit it, then press Enter to
+            Shows everyone&apos;s rows, up to 200 per table. Click a dark value to edit it, then press Enter to
             save or Esc to cancel. Leave a value blank to set it to null. Gray columns are read-only.
           </p>
           {error ? (
@@ -240,8 +240,16 @@ export function DbViewer({ revision, asUserId }: { revision: string; asUserId?: 
           {tables === null ? (
             <p className="py-4 text-sm text-zinc-500">Loading</p>
           ) : (
-            <Disclosure label="app_nutrition" detail={`${tables.length} tables`} defaultOpen>
-              {tables.map((table) => (
+            [...new Set(tables.map(({ schema }) => schema))].map((schema) => {
+              const inSchema = tables.filter((table) => table.schema === schema);
+              return (
+            <Disclosure
+              key={schema}
+              label={schema}
+              detail={`${inSchema.length} ${inSchema.length === 1 ? "table" : "tables"}`}
+              defaultOpen
+            >
+              {inSchema.map((table) => (
                 <Disclosure
                   key={table.name}
                   label={table.table}
@@ -299,6 +307,8 @@ export function DbViewer({ revision, asUserId }: { revision: string; asUserId?: 
                 </Disclosure>
               ))}
             </Disclosure>
+              );
+            })
           )}
         </div>
       </aside>

@@ -9,6 +9,7 @@ const day = (meals: number, calories: number): HistoryDay => ({
   carbsG: 0,
   fatG: 0,
   burned: 0,
+  glasses: 0,
   goalScore: 50,
 });
 

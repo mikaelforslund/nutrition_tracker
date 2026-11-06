@@ -1,9 +1,11 @@
 import { CalorieRing, MacroBar } from "@/components/mobile/calorie-ring";
+import { DrinksSection } from "@/components/mobile/drinks-section";
 import { LargeTitle, Section } from "@/components/mobile/ios";
 import { MealCell } from "@/components/mobile/meal-cell";
 import { WeightRow } from "@/components/mobile/weight-row";
 import { WorkoutsSection } from "@/components/mobile/workouts-section";
 import { requireMobileUser } from "@/lib/mobile-session";
+import { drinkDays } from "@/lib/nutrition/drinks";
 import { groupLogsByDay } from "@/lib/nutrition/group-logs";
 import { getDashboardData } from "@/lib/nutrition/repository";
 import { burnedByDay } from "@/lib/nutrition/workouts";
@@ -12,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function TodayPage() {
   const user = await requireMobileUser();
-  const { profile, today, todayTotals, recentLogs, weights, workouts } = await getDashboardData(
+  const { profile, today, todayTotals, recentLogs, weights, workouts, drinks } = await getDashboardData(
     user.id,
   );
 
@@ -44,6 +46,12 @@ export default async function TodayPage() {
       <Section>
         <WeightRow latest={weights[weights.length - 1]?.value ?? null} />
       </Section>
+
+      <DrinksSection
+        today={today}
+        day={drinkDays(drinks).find((entry) => entry.day === today)}
+        goal={profile.targetGlasses}
+      />
 
       <WorkoutsSection workouts={workouts.filter((workout) => workout.day === today)} today={today} />
 

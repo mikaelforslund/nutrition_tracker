@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getActingUser } from "@/lib/auth";
 import { getEnv } from "@/lib/env";
 import {
+  changeDrinkGlasses,
   editFoodLog,
   editWorkout,
   insertFoodLog,
@@ -22,6 +23,7 @@ import {
   profileInputSchema,
   weightSchema,
 } from "@/lib/nutrition/schemas";
+import { drinkChangeSchema } from "@/lib/nutrition/drinks";
 import { workoutInputSchema } from "@/lib/nutrition/workouts";
 import { getStorage } from "@/lib/storage";
 import {
@@ -128,6 +130,19 @@ export async function deleteWorkout(id: unknown, asUserId?: string): Promise<Act
   if (!parsed.success) return { status: "error", message: "That workout couldn't be found." };
 
   await removeWorkout(user.id, parsed.data);
+  revalidatePath("/", "layout");
+  return { status: "saved" };
+}
+
+/** Adds or takes away one glass of a drink on a day. */
+export async function changeDrink(input: unknown, asUserId?: string): Promise<ActionResult> {
+  const user = await getActingUser(asUserId);
+  if (!user) return { status: "error", message: "Sign in to record drinks." };
+
+  const parsed = drinkChangeSchema.safeParse(input);
+  if (!parsed.success) return { status: "error", message: "That drink couldn't be saved." };
+
+  await changeDrinkGlasses(user.id, parsed.data);
   revalidatePath("/", "layout");
   return { status: "saved" };
 }

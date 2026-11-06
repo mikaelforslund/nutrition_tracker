@@ -3,6 +3,7 @@ import { z } from "zod";
 import { AddToToday } from "@/components/mobile/add-to-today";
 import { BackButton } from "@/components/mobile/back-button";
 import { Row, Section } from "@/components/mobile/ios";
+import { EditMealButton } from "@/components/mobile/meal-edit-sheet";
 import { requireMobileUser } from "@/lib/mobile-session";
 import { getMealView } from "@/lib/nutrition/repository";
 
@@ -18,8 +19,9 @@ export default async function MealPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="pb-[calc(env(safe-area-inset-bottom)+2rem)]">
-      <nav className="sticky top-0 z-20 flex h-11 items-center border-b border-ios-separator bg-ios-bar px-4 pt-[env(safe-area-inset-top)] backdrop-blur-xl box-content">
+      <nav className="sticky top-0 z-20 flex h-11 items-center justify-between border-b border-ios-separator bg-ios-bar px-4 pt-[env(safe-area-inset-top)] backdrop-blur-xl box-content">
         <BackButton />
+        <EditMealButton meal={meal} />
       </nav>
 
       {meal.imageUrl ? (

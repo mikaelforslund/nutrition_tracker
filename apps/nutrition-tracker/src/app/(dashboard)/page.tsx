@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
-import { Card, CardContent, KpiCard, buttonClasses, type KpiCardProps } from "@trackerx/ui";
-import Link from "next/link";
+import { Card, CardContent, KpiCard, type KpiCardProps } from "@trackerx/ui";
 import { redirect } from "next/navigation";
 import { DbViewer } from "@/components/db-viewer";
+import { DrinksPanel } from "@/components/drinks-panel";
 import { FoodCapture } from "@/components/food-capture";
 import { FoodLogTree } from "@/components/food-log-tree";
+import { GoalsButton } from "@/components/goals-button";
 import { LiveRefresh } from "@/components/live-refresh";
 import { ProgressChart } from "@/components/progress-chart";
 import { ProjectionCard } from "@/components/projection-card";
@@ -12,12 +13,19 @@ import { SessionsPanel } from "@/components/sessions-panel";
 import { WorkoutsPanel } from "@/components/workouts-panel";
 import { getCurrentUser } from "@/lib/auth";
 import { getEnv } from "@/lib/env";
+import {
+  drinkDays,
+  drinkSummary,
+  glassesLabel,
+  glassesSeries,
+  type DrinkDay,
+} from "@/lib/nutrition/drinks";
 import { groupLogsByDay, type DayGroup } from "@/lib/nutrition/group-logs";
 import { projectGoalWeight } from "@/lib/nutrition/projection";
 import { burnedByDay } from "@/lib/nutrition/workouts";
 import { MEAL_WINDOW_DAYS, getDashboardData } from "@/lib/nutrition/repository";
 import { sortSessions, type SessionSort } from "@/lib/session-summary";
-import { listSessions } from "@/lib/sessions";
+import { listSessionGroups, listSessions } from "@/lib/sessions";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +73,19 @@ function macroCard(label: string, eaten: number, target: number, floor = false):
   };
 }
 
+function drinksCard(day: DrinkDay | undefined, goal: number): KpiCardProps {
+  const total = day?.total ?? 0;
+
+  return {
+    label: "Drinks",
+    value: whole(total),
+    unit: total === 1 ? "glass" : "glasses",
+    caption: day ? drinkSummary(day) : `Goal is ${glassesLabel(goal)}`,
+    status: total >= goal ? { tone: "good", label: "Goal met" } : undefined,
+    progress: { value: total, max: goal },
+  };
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -74,6 +95,7 @@ export default async function DashboardPage({
   // selection. Otherwise it's the signed-in user's own dashboard.
   const sessionsEnabled = getEnv().AUTH_MODE === "mock";
   const sessions = sessionsEnabled ? await listSessions() : [];
+  const sessionGroups = sessionsEnabled ? await listSessionGroups() : [];
   const { session: requestedSession, sort: requestedSort } = await searchParams;
   const sort: SessionSort = requestedSort === "oldest" ? "oldest" : "newest";
 
@@ -88,6 +110,7 @@ export default async function DashboardPage({
   const panel = sessionsEnabled ? (
     <SessionsPanel
       sessions={sortSessions(sessions, sort)}
+      groups={sessionGroups}
       selectedId={viewing?.id ?? null}
       protectedUserId={getEnv().MOCK_USER_ID}
       sort={sort}
@@ -102,7 +125,7 @@ export default async function DashboardPage({
         {panel}
         <Card>
           <CardContent className="py-16 text-center">
-            <h1 className="text-base font-semibold">No sessions yet</h1>
+            <h1 className="text-base font-semibold">No users yet</h1>
             <p className="mt-1 text-sm text-zinc-500">
               When someone opens the app on their phone and enters their name, they&apos;ll appear here.
             </p>
@@ -116,7 +139,7 @@ export default async function DashboardPage({
   if (!user) redirect("/login");
 
   const asUserId = viewing?.userId;
-  const { profile, today, todayTotals, recentDays, recentLogs, weights, workouts } = await getDashboardData(
+  const { profile, today, todayTotals, recentDays, recentLogs, weights, workouts, drinks } = await getDashboardData(
     user.id,
   );
 
@@ -138,7 +161,7 @@ export default async function DashboardPage({
 
   // Changes when the data does, which tells an open database viewer to reload.
   const revision = createHash("sha256")
-    .update(JSON.stringify([profile, recentLogs, weights, workouts]))
+    .update(JSON.stringify([profile, recentLogs, weights, workouts, drinks]))
     .digest("hex");
 
   const groups = groupLogsByDay(recentLogs, today, profile.timezone, profile.targetCalories, burned);
@@ -147,7 +170,17 @@ export default async function DashboardPage({
   const dailySeries = (value: (group: DayGroup) => number) =>
     groups.map((group) => ({ day: group.day, value: value(group) })).reverse();
 
-  const goalsHref = viewing ? `/settings?session=${viewing.id}` : "/settings";
+  const goalsButton = (label: string, className?: string) => (
+    <GoalsButton
+      label={label}
+      title={viewing ? `Goals for ${viewing.displayName}` : "Goals"}
+      profile={profile}
+      timezones={[...new Set([profile.timezone, "UTC", ...Intl.supportedValuesOf("timeZone")])]}
+      asUserId={asUserId}
+      canSignOut={!sessionsEnabled}
+      className={className}
+    />
+  );
 
   const dashboard = (
     <div className="flex min-w-0 flex-col gap-3">
@@ -163,21 +196,18 @@ export default async function DashboardPage({
             <DbViewer key={user.id} revision={revision} asUserId={asUserId} />
           ) : null}
           {/* Until goals exist, the projection card offers "Set goals" instead. */}
-          {projection.status === "needs_profile" ? null : (
-            <Link href={goalsHref} className={buttonClasses("secondary")}>
-              Edit goals
-            </Link>
-          )}
+          {projection.status === "needs_profile" ? null : goalsButton("Edit goals")}
         </div>
       </div>
 
-      <section aria-label="Today's totals" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Today's totals" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <KpiCard
           {...calorieCard(todayTotals.calories, burned.get(today) ?? 0, profile.targetCalories)}
         />
         <KpiCard {...macroCard("Protein", todayTotals.proteinG, profile.targetProteinG, true)} />
         <KpiCard {...macroCard("Carbs", todayTotals.carbsG, profile.targetCarbsG)} />
         <KpiCard {...macroCard("Fat", todayTotals.fatG, profile.targetFatG)} />
+        <KpiCard {...drinksCard(drinkDays(drinks).find((entry) => entry.day === today), profile.targetGlasses)} />
       </section>
 
       <div className="grid gap-3 md:grid-cols-5">
@@ -185,7 +215,11 @@ export default async function DashboardPage({
           <FoodCapture key={user.id} asUserId={asUserId} today={today} />
         </div>
         <div className="min-w-0 md:col-span-3">
-          <ProjectionCard projection={projection} profile={profile} goalsHref={goalsHref} />
+          <ProjectionCard
+            projection={projection}
+            profile={profile}
+            setGoals={goalsButton("Set goals", "mt-1 h-7 self-start px-2.5 text-xs")}
+          />
         </div>
       </div>
 
@@ -196,6 +230,7 @@ export default async function DashboardPage({
         asUserId={asUserId}
         today={today}
         workouts={<WorkoutsPanel workouts={workouts} today={today} asUserId={asUserId} />}
+        drinks={<DrinksPanel drinks={drinks} today={today} asUserId={asUserId} />}
         aboveList={
           <ProgressChart
             key={user.id}
@@ -204,6 +239,8 @@ export default async function DashboardPage({
             protein={dailySeries((group) => group.proteinG)}
             carbs={dailySeries((group) => group.carbsG)}
             fat={dailySeries((group) => group.fatG)}
+            glasses={glassesSeries(drinks)}
+            targetGlasses={profile.targetGlasses}
             goalWeightKg={profile.goalWeightKg}
             targetCalories={profile.targetCalories}
             asUserId={asUserId}

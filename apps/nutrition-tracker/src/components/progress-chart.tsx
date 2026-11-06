@@ -80,9 +80,15 @@ export function LineChart({
   reference = null,
   referenceLabel,
   empty,
+  singularUnit = unit,
+  zeroBased = false,
 }: {
   title: string;
   unit: string;
+  /** Shown instead of the unit for a value of exactly 1. */
+  singularUnit?: string;
+  /** Starts the axis at zero, for counts. */
+  zeroBased?: boolean;
   series: Series[];
   reference?: number | null;
   referenceLabel?: string;
@@ -109,11 +115,12 @@ export function LineChart({
         series.map((item) => item.data),
         reference,
         size,
+        zeroBased,
       ),
-    [series, reference, size],
+    [series, reference, size, zeroBased],
   );
 
-  const format = (value: number) => `${value.toLocaleString("en-US")} ${unit}`;
+  const format = (value: number) => `${value.toLocaleString("en-US")} ${value === 1 ? singularUnit : unit}`;
 
   function handleMove(event: PointerEvent<SVGSVGElement>) {
     const box = event.currentTarget.getBoundingClientRect();
@@ -361,6 +368,8 @@ export function ProgressChart({
   protein,
   carbs,
   fat,
+  glasses,
+  targetGlasses,
   goalWeightKg,
   targetCalories,
   asUserId,
@@ -370,16 +379,19 @@ export function ProgressChart({
   protein: ChartPoint[];
   carbs: ChartPoint[];
   fat: ChartPoint[];
+  glasses: ChartPoint[];
+  targetGlasses: number;
   goalWeightKg: number | null;
   targetCalories: number;
   asUserId?: string;
 }) {
   const [collapsed, toggleCollapsed] = useCollapsed();
-  const [view, setView] = useState<"weight" | "calories">("weight");
+  const [view, setView] = useState<"weight" | "calories" | "drinks">("weight");
 
   const weightSeries = useMemo(() => singleSeries("Weight", weights), [weights]);
   const calorieSeries = useMemo(() => singleSeries("Calories", calories), [calories]);
   const macroLines = useMemo(() => macroSeries(protein, carbs, fat), [protein, carbs, fat]);
+  const glassesLine = useMemo(() => singleSeries("Glasses", glasses), [glasses]);
 
   return (
     <section aria-label="Progress" className="min-w-0 rounded-lg border border-zinc-200 p-2.5">
@@ -399,7 +411,7 @@ export function ProgressChart({
           </button>
           {collapsed ? null : (
             <div role="group" aria-label="Chart" className="flex rounded-lg bg-zinc-100 p-0.5">
-              {(["weight", "calories"] as const).map((option) => (
+              {(["weight", "calories", "drinks"] as const).map((option) => (
                 <button
                   key={option}
                   type="button"
@@ -431,6 +443,17 @@ export function ProgressChart({
               reference={goalWeightKg}
               referenceLabel="Goal"
               empty="Record your weight to start the chart."
+            />
+          ) : view === "drinks" ? (
+            <LineChart
+              title="Glasses per day"
+              unit="glasses"
+              singularUnit="glass"
+              zeroBased
+              series={glassesLine}
+              reference={targetGlasses}
+              referenceLabel="Goal"
+              empty="Log a drink to start the chart."
             />
           ) : (
             <div className="grid gap-4 md:grid-cols-2">

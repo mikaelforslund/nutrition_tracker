@@ -38,3 +38,48 @@ export function sortSessions<T extends SessionTimes>(sessions: readonly T[], sor
     (a, b) => direction * (a.createdAt.getTime() - b.createdAt.getTime()),
   );
 }
+
+export type SessionGroup = { id: string; name: string };
+
+/** Sessions whose person isn't in any group have this key instead of a group's id. */
+export const UNGROUPED = "ungrouped";
+
+export type GroupedSessions<T> = {
+  /** Null for the people in no group. */
+  group: SessionGroup | null;
+  key: string;
+  sessions: T[];
+};
+
+/**
+ * Sessions under their groups, keeping the order they arrive in, with the ungrouped
+ * last. Empty parents stay, since they're where people get dragged to.
+ */
+export function groupSessions<T extends { groupId: string | null }>(
+  sessions: readonly T[],
+  groups: readonly SessionGroup[],
+): GroupedSessions<T>[] {
+  const known = new Set(groups.map(({ id }) => id));
+  const ungrouped = sessions.filter(({ groupId }) => groupId === null || !known.has(groupId));
+
+  const parents: GroupedSessions<T>[] = groups.map((group) => ({
+    group,
+    key: group.id,
+    sessions: sessions.filter(({ groupId }) => groupId === group.id),
+  }));
+
+  return [...parents, { group: null, key: UNGROUPED, sessions: ungrouped }];
+}
+
+/** People, not rows: someone on two devices has two sessions but is one user. */
+export function countUsers(sessions: readonly { userId: string }[]): number {
+  return new Set(sessions.map(({ userId }) => userId)).size;
+}
+
+/** Such as "3 users, 1 active". */
+export function groupSummary(sessions: readonly (SessionTimes & { userId: string })[], now: number): string {
+  const active = countUsers(sessions.filter((session) => sessionStatus(session, now) === "active"));
+  const users = countUsers(sessions);
+  const count = `${users} ${users === 1 ? "user" : "users"}`;
+  return active > 0 ? `${count}, ${active} active` : count;
+}

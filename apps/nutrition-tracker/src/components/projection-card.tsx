@@ -1,5 +1,6 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, buttonClasses } from "@trackerx/ui";
-import Link from "next/link";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@trackerx/ui";
+import type { ReactNode } from "react";
+import { glassesLabel } from "@/lib/nutrition/drinks";
 import type { Projection } from "@/lib/nutrition/projection";
 import type { Profile } from "@/lib/nutrition/repository";
 
@@ -21,6 +22,7 @@ function goalRows(profile: Profile) {
     ["Protein", amount(profile.targetProteinG, "g")],
     ["Carbs", amount(profile.targetCarbsG, "g")],
     ["Fat", amount(profile.targetFatG, "g")],
+    ["Drinks", glassesLabel(profile.targetGlasses)],
     ["Current weight", amount(profile.currentWeightKg, "kg")],
     ["Goal weight", amount(profile.goalWeightKg, "kg")],
   ] as const;
@@ -29,11 +31,12 @@ function goalRows(profile: Profile) {
 export function ProjectionCard({
   projection,
   profile,
-  goalsHref = "/settings",
+  setGoals,
 }: {
   projection: Projection;
   profile: Profile;
-  goalsHref?: string;
+  /** Offered until there's a goal to project towards. */
+  setGoals?: ReactNode;
 }) {
   const onTrack = projection.status === "on_track";
 
@@ -57,14 +60,7 @@ export function ProjectionCard({
                 An estimate that assumes you burn about 30 kcal per kg of body weight, 7,700 kcal per kg lost, and steady intake.
               </p>
             ) : null}
-            {projection.status === "needs_profile" ? (
-              <Link
-                href={goalsHref}
-                className={buttonClasses("secondary", "mt-1 h-7 self-start px-2.5 text-xs")}
-              >
-                Set goals
-              </Link>
-            ) : null}
+            {projection.status === "needs_profile" ? setGoals : null}
           </CardContent>
         </div>
 

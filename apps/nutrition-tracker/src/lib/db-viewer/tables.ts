@@ -16,8 +16,12 @@ export type ViewerTable = {
   orderBy: string;
   /** No database role but the server's can read this table, and only with mock auth. */
   serverOnly?: boolean;
+  /** A row whose value must never leave the server. */
+  secret?: { whereColumn: string; equals: string; column: string };
   columns: readonly ViewerColumn[];
 };
+
+export const MASKED_VALUE = "••••••••";
 
 /**
  * Everything the viewer can reach. Requests can only name entries from this
@@ -40,6 +44,7 @@ export const VIEWER_TABLES: readonly ViewerTable[] = [
       { name: "target_protein_g", type: "integer", editable: true },
       { name: "target_carbs_g", type: "integer", editable: true },
       { name: "target_fat_g", type: "integer", editable: true },
+      { name: "target_glasses", type: "integer", editable: true },
       { name: "current_weight_kg", type: "numeric", editable: true, nullable: true },
       { name: "goal_weight_kg", type: "numeric", editable: true, nullable: true },
       { name: "timezone", type: "text" },
@@ -96,6 +101,20 @@ export const VIEWER_TABLES: readonly ViewerTable[] = [
   },
   {
     schema: "app_nutrition",
+    table: "drink_logs",
+    key: "id",
+    orderBy: "drunk_on desc",
+    columns: [
+      { name: "id", type: "uuid" },
+      { name: "user_id", type: "uuid" },
+      { name: "drunk_on", type: "text" },
+      { name: "drink_type", type: "text" },
+      { name: "glasses", type: "integer", editable: true },
+      { name: "created_at", type: "timestamptz" },
+    ],
+  },
+  {
+    schema: "app_nutrition",
     table: "device_sessions",
     key: "id",
     orderBy: "created_at desc",
@@ -110,7 +129,65 @@ export const VIEWER_TABLES: readonly ViewerTable[] = [
       { name: "ended_at", type: "timestamptz" },
     ],
   },
+  {
+    schema: "app_nutrition",
+    table: "session_groups",
+    key: "id",
+    orderBy: "lower(name)",
+    serverOnly: true,
+    columns: [
+      { name: "id", type: "uuid" },
+      { name: "name", type: "text" },
+      { name: "created_at", type: "timestamptz" },
+    ],
+  },
+  {
+    schema: "app_nutrition",
+    table: "person_groups",
+    key: "user_id",
+    orderBy: "user_id",
+    serverOnly: true,
+    columns: [
+      { name: "user_id", type: "uuid" },
+      { name: "group_id", type: "uuid" },
+    ],
+  },
+  {
+    schema: "app_nutrition",
+    table: "app_settings",
+    key: "key",
+    orderBy: "key",
+    serverOnly: true,
+    secret: { whereColumn: "key", equals: "vision.api_key", column: "value" },
+    columns: [
+      { name: "key", type: "text" },
+      { name: "value", type: "text" },
+      { name: "updated_at", type: "timestamptz" },
+    ],
+  },
+  {
+    schema: "auth",
+    table: "users",
+    key: "id",
+    orderBy: "created_at",
+    serverOnly: true,
+    columns: [
+      { name: "id", type: "uuid" },
+      { name: "email", type: "text" },
+      { name: "created_at", type: "timestamptz" },
+    ],
+  },
 ];
+
+/** Hides a table's secret, which runs before rows are sent to the browser. */
+export function maskSecret<T extends Record<string, unknown>>(table: ViewerTable, rows: readonly T[]): T[] {
+  const { secret } = table;
+  if (!secret) return [...rows];
+
+  return rows.map((row) =>
+    row[secret.whereColumn] === secret.equals ? { ...row, [secret.column]: MASKED_VALUE } : row,
+  );
+}
 
 /**
  * True for SQLSTATE classes 22 and 23: bad data and failed constraints, which are

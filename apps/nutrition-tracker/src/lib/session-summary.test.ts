@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  UNGROUPED,
   formatDuration,
+  groupSessions,
+  groupSummary,
   sessionDurationMs,
   sessionStatus,
   sortSessions,
@@ -66,5 +69,49 @@ describe("sortSessions", () => {
   it("sorts by start time in both directions", () => {
     expect(sortSessions([older, newer], "newest")).toEqual([newer, older]);
     expect(sortSessions([newer, older], "oldest")).toEqual([older, newer]);
+  });
+});
+
+describe("groupSessions", () => {
+  const family = { id: "family", name: "Family" };
+  const work = { id: "work", name: "Work" };
+  const a = { name: "a", groupId: "family" };
+  const b = { name: "b", groupId: null };
+  const c = { name: "c", groupId: "family" };
+
+  it("puts sessions under their group in the order they arrive, ungrouped last", () => {
+    expect(groupSessions([a, b, c], [family])).toEqual([
+      { group: family, key: "family", sessions: [a, c] },
+      { group: null, key: UNGROUPED, sessions: [b] },
+    ]);
+  });
+
+  it("keeps empty groups so people can be moved into them", () => {
+    expect(groupSessions([a], [family, work])).toEqual([
+      { group: family, key: "family", sessions: [a] },
+      { group: work, key: "work", sessions: [] },
+      { group: null, key: UNGROUPED, sessions: [] },
+    ]);
+  });
+
+  it("never loses a session whose group has just been deleted", () => {
+    expect(groupSessions([a], [])).toEqual([{ group: null, key: UNGROUPED, sessions: [a] }]);
+  });
+});
+
+describe("groupSummary", () => {
+  const user = (userId: string, minutesAgo: number) => ({ ...session({ lastSeenAt: ago(minutesAgo) }), userId });
+
+  it("counts users and mentions active ones", () => {
+    expect(groupSummary([user("a", 1), user("b", 90)], now)).toBe("2 users, 1 active");
+  });
+
+  it("counts someone on two devices once", () => {
+    expect(groupSummary([user("a", 1), user("a", 2)], now)).toBe("1 user, 1 active");
+  });
+
+  it("leaves out active when there are none", () => {
+    expect(groupSummary([user("a", 90)], now)).toBe("1 user");
+    expect(groupSummary([], now)).toBe("0 users");
   });
 });

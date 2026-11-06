@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { getSql } from "./db";
+import type { SessionGroup } from "./session-summary";
 
 /**
  * A local stand-in for accounts, used only with AUTH_MODE=mock. People pick a
@@ -35,6 +36,7 @@ export type SessionSummary = {
   userId: string;
   displayName: string;
   deviceLabel: string;
+  groupId: string | null;
   timezone: string;
   createdAt: Date;
   lastSeenAt: Date;
@@ -193,7 +195,14 @@ export async function removePerson(userId: string): Promise<string[]> {
 /** Changes whenever a session starts, ends, or is used. */
 export async function sessionsVersion(): Promise<string> {
   const [row] = await getSql()<{ version: string }[]>`
-    select concat_ws(':', count(*), count(ended_at), max(last_seen_at)) as version
+    select concat_ws(
+      ':',
+      count(*),
+      count(ended_at),
+      max(last_seen_at),
+      (select md5(string_agg(g::text, ',' order by g.id)) from app_nutrition.session_groups g),
+      (select md5(string_agg(m::text, ',' order by m.user_id)) from app_nutrition.person_groups m)
+    ) as version
     from app_nutrition.device_sessions
   `;
   return row?.version ?? "";
@@ -207,14 +216,64 @@ export async function listSessions(): Promise<SessionSummary[]> {
       s.user_id as "userId",
       coalesce(p.display_name, 'Unknown') as "displayName",
       s.device_label as "deviceLabel",
+      m.group_id as "groupId",
       coalesce(p.timezone, 'UTC') as timezone,
       s.created_at as "createdAt",
       s.last_seen_at as "lastSeenAt",
       s.ended_at as "endedAt"
     from app_nutrition.device_sessions s
     left join app_nutrition.user_profiles p on p.user_id = s.user_id
+    left join app_nutrition.person_groups m on m.user_id = s.user_id
     order by s.last_seen_at desc
     limit ${SESSION_LIST_LIMIT}
   `;
   return [...sessions];
+}
+
+/** Every group, in alphabetical order. */
+export async function listSessionGroups(): Promise<SessionGroup[]> {
+  const groups = await getSql()<SessionGroup[]>`
+    select id, name from app_nutrition.session_groups order by lower(name)
+  `;
+  return [...groups];
+}
+
+/** Adds a group, or renames one when given an id. Returns false if the name is taken. */
+export async function saveSessionGroup(id: string | null, name: string): Promise<boolean> {
+  const [taken] = await getSql()`
+    select 1 from app_nutrition.session_groups
+    where lower(name) = lower(${name}) and id is distinct from ${id}::uuid
+  `;
+  if (taken) return false;
+
+  // The conflict clause covers two people adding the same name at once.
+  const saved = id
+    ? await getSql()`update app_nutrition.session_groups set name = ${name} where id = ${id} returning 1`
+    : await getSql()`
+        insert into app_nutrition.session_groups (name) values (${name})
+        on conflict (lower(name)) do nothing
+        returning 1
+      `;
+  return saved.length > 0;
+}
+
+/** Its people become ungrouped, and nothing else changes. */
+export async function deleteSessionGroup(id: string): Promise<void> {
+  await getSql()`delete from app_nutrition.session_groups where id = ${id}`;
+}
+
+/** With a null group, takes the person out of theirs. Returns false if the group is gone. */
+export async function movePersonToGroup(userId: string, groupId: string | null): Promise<boolean> {
+  if (groupId === null) {
+    await getSql()`delete from app_nutrition.person_groups where user_id = ${userId}`;
+    return true;
+  }
+
+  const moved = await getSql()`
+    insert into app_nutrition.person_groups (user_id, group_id)
+    select ${userId}, id from app_nutrition.session_groups where id = ${groupId}
+    on conflict (user_id) do update set group_id = excluded.group_id
+    returning 1
+  `;
+  return moved.length > 0;
 }

@@ -22,6 +22,16 @@ describe("buildChart", () => {
     expect(second!.x).toBeCloseTo(66);
   });
 
+  it("starts the axis at zero for counts, with whole-number labels", () => {
+    const glasses = [
+      { day: "2026-03-01", value: 7 },
+      { day: "2026-03-02", value: 9 },
+    ];
+    const chart = buildChart([glasses], 8, size, true)!;
+    expect(chart.ticks[0]!.value).toBe(0);
+    expect(chart.ticks.every((tick) => Number.isInteger(tick.value))).toBe(true);
+  });
+
   it("keeps every point and the reference inside the plot", () => {
     const chart = buildChart([data], 78, size)!;
     for (const y of [...chart.series[0]!.points.map((p) => p.y), chart.referenceY!]) {

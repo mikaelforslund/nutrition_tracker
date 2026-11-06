@@ -1,5 +1,7 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { isBadDataError, parseCellEdit, VIEWER_TABLES } from "./tables";
+import { MASKED_VALUE, VIEWER_TABLES, isBadDataError, maskSecret, parseCellEdit } from "./tables";
 
 const rowId = "00000000-0000-4000-8000-000000000001";
 const edit = { table: "app_nutrition.food_logs", column: "protein_g", rowId, value: "50" };
@@ -57,5 +59,38 @@ describe("parseCellEdit", () => {
     for (const table of VIEWER_TABLES) {
       expect(table.columns.some((column) => column.name === table.key)).toBe(true);
     }
+  });
+});
+
+describe("VIEWER_TABLES", () => {
+  it("lists every table the migrations create", () => {
+    const folder = fileURLToPath(new URL("../../../../../supabase/migrations", import.meta.url));
+    const sql = readdirSync(folder)
+      .map((file) => readFileSync(`${folder}/${file}`, "utf8"))
+      .join("\n");
+    const created = [...sql.matchAll(/create table (\w+\.\w+)/g)].map((match) => match[1]);
+
+    const listed = VIEWER_TABLES.map(({ schema, table }) => `${schema}.${table}`);
+    expect(created.length).toBeGreaterThan(0);
+    expect(created.filter((name) => !listed.includes(name!))).toEqual([]);
+  });
+});
+
+describe("maskSecret", () => {
+  const settings = VIEWER_TABLES.find(({ table }) => table === "app_settings")!;
+
+  it("hides the API key and leaves other settings readable", () => {
+    const rows = [
+      { key: "vision.api_key", value: "sk-real" },
+      { key: "vision.model", value: "qwen3.5:9b" },
+    ];
+    expect(maskSecret(settings, rows)).toEqual([
+      { key: "vision.api_key", value: MASKED_VALUE },
+      { key: "vision.model", value: "qwen3.5:9b" },
+    ]);
+  });
+
+  it("can't be edited through the viewer", () => {
+    expect(settings.columns.some((column) => column.editable)).toBe(false);
   });
 });

@@ -16,7 +16,7 @@ const KEYS = {
 } as const;
 
 async function readStored(): Promise<Map<string, string>> {
-  // The config page only exists with mock auth, so cloud deployments use the environment.
+  // Settings can only be saved with mock auth, so cloud deployments use the environment.
   if (getEnv().AUTH_MODE !== "mock") return new Map();
 
   const rows = await getSql()<{ key: string; value: string }[]>`

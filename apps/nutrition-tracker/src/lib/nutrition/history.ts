@@ -9,6 +9,7 @@ export type HistoryDay = {
   carbsG: number;
   fatG: number;
   burned: number;
+  glasses: number;
   goalScore: number | null;
 };
 

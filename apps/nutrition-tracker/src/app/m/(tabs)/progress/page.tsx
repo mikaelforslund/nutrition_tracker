@@ -1,6 +1,7 @@
 import { LargeTitle } from "@/components/mobile/ios";
 import { MobileCharts } from "@/components/mobile/mobile-charts";
 import { requireMobileUser } from "@/lib/mobile-session";
+import { glassesSeries } from "@/lib/nutrition/drinks";
 import { groupLogsByDay, type DayGroup } from "@/lib/nutrition/group-logs";
 import { getDashboardData } from "@/lib/nutrition/repository";
 
@@ -8,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ProgressPage() {
   const user = await requireMobileUser();
-  const { profile, today, recentLogs, weights } = await getDashboardData(user.id);
+  const { profile, today, recentLogs, weights, drinks } = await getDashboardData(user.id);
 
   const groups = groupLogsByDay(recentLogs, today, profile.timezone, profile.targetCalories);
 
@@ -25,6 +26,8 @@ export default async function ProgressPage() {
         protein={daily((group) => group.proteinG)}
         carbs={daily((group) => group.carbsG)}
         fat={daily((group) => group.fatG)}
+        glasses={glassesSeries(drinks)}
+        targetGlasses={profile.targetGlasses}
         goalWeightKg={profile.goalWeightKg}
         targetCalories={profile.targetCalories}
       />
