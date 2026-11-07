@@ -35,3 +35,10 @@ export const workoutInputSchema = z.object({
   workedOutOn: z.iso.date(),
 });
 export type WorkoutInput = z.infer<typeof workoutInputSchema>;
+
+/** The workout form also takes a weight, which can be recorded with no workout at all. */
+export function hasNoWorkoutDetails(form: FormData): boolean {
+  return ["workoutType", "durationMinutes", "caloriesBurned"].every(
+    (field) => !String(form.get(field) ?? "").trim(),
+  );
+}

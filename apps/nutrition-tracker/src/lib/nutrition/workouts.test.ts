@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { burnedByDay, workoutInputSchema } from "./workouts";
+import { burnedByDay, hasNoWorkoutDetails, workoutInputSchema } from "./workouts";
 
 const form = {
   workoutType: " Running ",
@@ -48,5 +48,22 @@ describe("workoutInputSchema", () => {
     ["an invalid date", { ...form, workedOutOn: "2026-13-40" }],
   ])("rejects %s", (_name, input) => {
     expect(workoutInputSchema.safeParse(input).success).toBe(false);
+  });
+});
+
+describe("hasNoWorkoutDetails", () => {
+  const filled = (fields: Record<string, string>) => {
+    const data = new FormData();
+    for (const [key, value] of Object.entries(fields)) data.set(key, value);
+    return data;
+  };
+
+  it("ignores the date and weight", () => {
+    const blank = { workoutType: " ", durationMinutes: "", caloriesBurned: "" };
+    expect(hasNoWorkoutDetails(filled({ ...blank, workedOutOn: "2026-03-10", weightKg: "80" }))).toBe(true);
+  });
+
+  it("spots a half-filled workout", () => {
+    expect(hasNoWorkoutDetails(filled({ durationMinutes: "20" }))).toBe(false);
   });
 });

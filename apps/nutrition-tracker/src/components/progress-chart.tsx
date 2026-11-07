@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input, StatusLabel, cn } from "@trackerx/ui";
+import { cn } from "@trackerx/ui";
 import { ChevronRight } from "lucide-react";
 import {
   useEffect,
@@ -8,13 +8,9 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-  useTransition,
-  type FormEvent,
   type PointerEvent,
 } from "react";
-import { saveWeight } from "@/app/actions";
 import { buildChart, nearestPoint, type ChartPoint } from "@/lib/nutrition/chart";
-import { parseDecimal } from "@/lib/nutrition/manual-meal";
 
 const HEIGHT = 150;
 const MARGIN = { left: 38, right: 14, top: 10, bottom: 20 };
@@ -292,51 +288,6 @@ export function LineChart({
   );
 }
 
-function RecordWeight({ asUserId, latest }: { asUserId?: string; latest: number | null }) {
-  const [value, setValue] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isSaving, startSaving] = useTransition();
-
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    setError(null);
-
-    startSaving(async () => {
-      const result = await saveWeight(parseDecimal(value), asUserId).catch(() => null);
-      if (result?.status === "saved") {
-        setValue("");
-      } else {
-        setError(result?.message ?? "That weight couldn't be saved.");
-      }
-    });
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-2">
-      {error ? (
-        <span role="alert">
-          <StatusLabel tone="critical">{error}</StatusLabel>
-        </span>
-      ) : null}
-      <Input
-        aria-label="Today's weight in kg"
-        inputMode="decimal"
-        required
-        value={value}
-        placeholder={latest === null ? "Weight (kg)" : `${latest} kg`}
-        onChange={(event) => {
-          setValue(event.target.value);
-          setError(null);
-        }}
-        className="h-8 w-28 text-xs"
-      />
-      <Button type="submit" variant="secondary" disabled={isSaving} className="h-8 px-2.5 text-xs">
-        {isSaving ? "Saving" : "Record weight"}
-      </Button>
-    </form>
-  );
-}
-
 function subscribeToCollapse(onChange: () => void) {
   window.addEventListener("storage", onChange);
   window.addEventListener(COLLAPSE_EVENT, onChange);
@@ -372,7 +323,6 @@ export function ProgressChart({
   targetGlasses,
   goalWeightKg,
   targetCalories,
-  asUserId,
 }: {
   weights: ChartPoint[];
   calories: ChartPoint[];
@@ -383,18 +333,17 @@ export function ProgressChart({
   targetGlasses: number;
   goalWeightKg: number | null;
   targetCalories: number;
-  asUserId?: string;
 }) {
   const [collapsed, toggleCollapsed] = useCollapsed();
   const [view, setView] = useState<"weight" | "calories" | "drinks">("weight");
 
   const weightSeries = useMemo(() => singleSeries("Weight", weights), [weights]);
-  const calorieSeries = useMemo(() => singleSeries("Calories", calories), [calories]);
+  const calorieSeries = useMemo(() => singleSeries("Net calories", calories), [calories]);
   const macroLines = useMemo(() => macroSeries(protein, carbs, fat), [protein, carbs, fat]);
   const glassesLine = useMemo(() => singleSeries("Glasses", glasses), [glasses]);
 
   return (
-    <section aria-label="Progress" className="min-w-0 rounded-lg border border-zinc-200 p-2.5">
+    <section aria-label="Progress" className="min-w-0 rounded-xl border border-zinc-200 bg-white p-3.5 shadow-xs">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-3">
           <button
@@ -428,9 +377,6 @@ export function ProgressChart({
             </div>
           )}
         </div>
-        {view === "weight" ? (
-          <RecordWeight asUserId={asUserId} latest={weights[weights.length - 1]?.value ?? null} />
-        ) : null}
       </div>
 
       {collapsed ? null : (
@@ -442,7 +388,7 @@ export function ProgressChart({
               series={weightSeries}
               reference={goalWeightKg}
               referenceLabel="Goal"
-              empty="Record your weight to start the chart."
+              empty="Use Add workout on the Workouts tab to record your weight."
             />
           ) : view === "drinks" ? (
             <LineChart
@@ -458,7 +404,7 @@ export function ProgressChart({
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               <LineChart
-                title="Calories"
+                title="Net calories"
                 unit="kcal"
                 series={calorieSeries}
                 reference={targetCalories}

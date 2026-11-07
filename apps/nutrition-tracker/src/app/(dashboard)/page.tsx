@@ -20,7 +20,7 @@ import {
   glassesSeries,
   type DrinkDay,
 } from "@/lib/nutrition/drinks";
-import { groupLogsByDay, type DayGroup } from "@/lib/nutrition/group-logs";
+import { groupLogsByDay, netCalories, type DayGroup } from "@/lib/nutrition/group-logs";
 import { projectGoalWeight } from "@/lib/nutrition/projection";
 import { burnedByDay } from "@/lib/nutrition/workouts";
 import { MEAL_WINDOW_DAYS, getDashboardData } from "@/lib/nutrition/repository";
@@ -229,25 +229,22 @@ export default async function DashboardPage({
         windowDays={MEAL_WINDOW_DAYS}
         asUserId={asUserId}
         today={today}
-        workouts={<WorkoutsPanel workouts={workouts} today={today} asUserId={asUserId} />}
+        workouts={<WorkoutsPanel workouts={workouts} weights={weights} today={today} asUserId={asUserId} />}
         drinks={<DrinksPanel drinks={drinks} today={today} asUserId={asUserId} />}
-        aboveList={
-          <ProgressChart
-            key={user.id}
-            weights={weights}
-            calories={dailySeries((group) => group.calories)}
-            protein={dailySeries((group) => group.proteinG)}
-            carbs={dailySeries((group) => group.carbsG)}
-            fat={dailySeries((group) => group.fatG)}
-            glasses={glassesSeries(drinks)}
-            targetGlasses={profile.targetGlasses}
-            goalWeightKg={profile.goalWeightKg}
-            targetCalories={profile.targetCalories}
-            asUserId={asUserId}
-          />
-        }
       />
 
+      <ProgressChart
+        key={`progress-${user.id}`}
+        weights={weights}
+        calories={dailySeries(netCalories)}
+        protein={dailySeries((group) => group.proteinG)}
+        carbs={dailySeries((group) => group.carbsG)}
+        fat={dailySeries((group) => group.fatG)}
+        glasses={glassesSeries(drinks)}
+        targetGlasses={profile.targetGlasses}
+        goalWeightKg={profile.goalWeightKg}
+        targetCalories={profile.targetCalories}
+      />
     </div>
   );
 

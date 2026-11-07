@@ -77,6 +77,9 @@ function ManualForm({
   onChange: (change: Partial<ManualMealDraft>) => void;
 }) {
   const total = manualMealToLog(draft);
+  // The server decides what today is when no day is picked, so this is only the
+  // picker's starting point and can't push a meal onto the wrong day by itself.
+  const deviceToday = new Date().toLocaleDateString("en-CA");
 
   return (
     <>
@@ -121,6 +124,17 @@ function ManualForm({
             </div>
           </div>
         </div>
+        <label className="flex min-h-11 items-center gap-3 px-4">
+          <span className="shrink-0">Date</span>
+          <input
+            aria-label="Date"
+            type="date"
+            max={deviceToday}
+            value={draft.day ?? deviceToday}
+            onChange={(event) => onChange({ day: event.target.value })}
+            className="min-w-0 flex-1 bg-transparent py-2.5 text-right text-ios-secondary outline-none"
+          />
+        </label>
       </div>
 
       <p className="mx-8 mt-6 pb-1.5 text-[13px] text-ios-secondary uppercase">Per Serving</p>

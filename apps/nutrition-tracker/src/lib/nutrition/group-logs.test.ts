@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { goalScore, groupLogsByDay, type MealRow } from "./group-logs";
+import { dayLabel, goalScore, groupLogsByDay, netCalories, type MealRow } from "./group-logs";
 
 const meal = (overrides: Partial<MealRow>): MealRow => ({
   id: "1",
@@ -95,5 +95,20 @@ describe("groupLogsByDay", () => {
   it("shows times in the user's timezone", () => {
     const [day] = groupLogsByDay([meal({})], "2026-03-10", "Asia/Tokyo", 2000);
     expect(day?.meals[0]?.time).toBe("9:00 PM");
+  });
+});
+
+describe("dayLabel", () => {
+  it("names today and yesterday, and dates anything older", () => {
+    expect(dayLabel("2026-03-03", "2026-03-03")).toBe("Today");
+    expect(dayLabel("2026-03-02", "2026-03-03")).toBe("Yesterday");
+    expect(dayLabel("2026-02-25", "2026-03-03")).toBe("Wed, Feb 25");
+  });
+});
+
+describe("netCalories", () => {
+  it("takes the day's workouts off what was eaten", () => {
+    expect(netCalories({ calories: 1800, burned: 250 })).toBe(1550);
+    expect(netCalories({ calories: 1800, burned: 0 })).toBe(1800);
   });
 });

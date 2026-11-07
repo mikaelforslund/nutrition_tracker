@@ -16,7 +16,6 @@ import { LoaderCircle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { saveFoodLog } from "@/app/actions";
 import { ManualMealDialog } from "@/components/manual-meal-dialog";
-import { WorkoutDialog } from "@/components/workouts-panel";
 import { caloriesFromMacros } from "@/lib/nutrition/calories";
 import { analyzeImage, type MealDraft as Draft } from "@/lib/vision/analyze-client";
 import { ACCEPTED_IMAGE_TYPES, MAX_IMAGE_BYTES } from "@/lib/vision/contract";
@@ -34,8 +33,8 @@ export function FoodCapture({ asUserId, today }: { asUserId?: string; today: str
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSaving, startSaving] = useTransition();
-  const [dialog, setDialog] = useState<"meal" | "workout" | null>(null);
-  const closeDialog = useCallback(() => setDialog(null), []);
+  const [enteringMeal, setEnteringMeal] = useState(false);
+  const closeDialog = useCallback(() => setEnteringMeal(false), []);
   const requestRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -106,15 +105,10 @@ export function FoodCapture({ asUserId, today }: { asUserId?: string; today: str
   return (
     <Card className="h-full">
       <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 p-3.5 pb-0">
-        <CardTitle>Log a meal/workout</CardTitle>
-        <div className="flex gap-1.5">
-          <Button variant="secondary" onClick={() => setDialog("meal")} className="h-7 px-2 text-xs">
-            Enter meal
-          </Button>
-          <Button variant="secondary" onClick={() => setDialog("workout")} className="h-7 px-2 text-xs">
-            Add workout
-          </Button>
-        </div>
+        <CardTitle>Log a meal</CardTitle>
+        <Button variant="secondary" onClick={() => setEnteringMeal(true)} className="h-7 px-2 text-xs">
+          Enter meal
+        </Button>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 p-3.5 pt-2">
         {stage.name === "idle" ? (
@@ -205,10 +199,7 @@ export function FoodCapture({ asUserId, today }: { asUserId?: string; today: str
           </p>
         ) : null}
       </CardContent>
-      {dialog === "meal" ? <ManualMealDialog asUserId={asUserId} onClose={closeDialog} /> : null}
-      {dialog === "workout" ? (
-        <WorkoutDialog workout={null} today={today} asUserId={asUserId} onClose={closeDialog} />
-      ) : null}
+      {enteringMeal ? <ManualMealDialog asUserId={asUserId} today={today} onClose={closeDialog} /> : null}
     </Card>
   );
 }

@@ -57,3 +57,16 @@ describe("manualMealToLog", () => {
     expect(manualMealToLog(draft)).toBeNull();
   });
 });
+
+describe("manualMealToLog day", () => {
+  const draft = { ...EMPTY_MANUAL_MEAL, foodName: "Oats", proteinG: "10" };
+
+  it("keeps a picked day and leaves it unset otherwise", () => {
+    expect(manualMealToLog({ ...draft, day: "2026-03-01" })?.day).toBe("2026-03-01");
+    expect(manualMealToLog(draft)?.day).toBeUndefined();
+  });
+
+  it("isn't usable while the date field is empty", () => {
+    expect(manualMealToLog({ ...draft, day: "" })).toBeNull();
+  });
+});

@@ -8,6 +8,8 @@ export const foodLogInputSchema = z.object({
   carbsG: macroGrams,
   fatG: macroGrams,
   imageUrl: z.string().max(2048).nullable(),
+  /** Logs the meal on an earlier day. Without it, the meal is logged right now. */
+  day: z.iso.date().optional(),
 });
 export type FoodLogInput = z.infer<typeof foodLogInputSchema>;
 

@@ -1,12 +1,12 @@
 "use client";
 
-import { Button, Card, CardContent, CardDescription, cn } from "@trackerx/ui";
+import { Button, Card, CardContent, CardDescription, Input, cn } from "@trackerx/ui";
 import { ChevronRight, ClipboardPaste, Copy, Pencil, Trash2, Trophy, Utensils, X } from "lucide-react";
 import { useCallback, useState, useTransition, type ReactNode } from "react";
 import { deleteFoodLogs, pasteFoodLog } from "@/app/actions";
 import { MealEditDialog } from "@/components/meal-edit-dialog";
 import { useCopiedMeal, type CopiedMeal } from "@/components/use-copied-meal";
-import type { DayGroup } from "@/lib/nutrition/group-logs";
+import { dayLabel, type DayGroup } from "@/lib/nutrition/group-logs";
 
 const NUMERIC_CELL = "px-2 py-2.5 text-right whitespace-nowrap tabular-nums";
 // Macros give way on narrow screens so calories stay visible without scrolling.
@@ -263,7 +263,6 @@ export function FoodLogTree({
   windowDays,
   asUserId,
   today,
-  aboveList,
   workouts,
   drinks,
 }: {
@@ -271,8 +270,6 @@ export function FoodLogTree({
   windowDays: number;
   asUserId?: string;
   today: string;
-  /** Shown between the panel's heading and the list. */
-  aboveList?: ReactNode;
   /** Content of the Workouts tab. */
   workouts?: ReactNode;
   /** Content of the Drinks tab. */
@@ -286,20 +283,22 @@ export function FoodLogTree({
 
   const [tab, setTab] = useState<"meals" | "workouts" | "drinks">("meals");
   const { copied, copy, clear } = useCopiedMeal();
-  const [pasteError, setPasteError] = useState<string | null>(null);
+  const [pickedDay, setPickedDay] = useState<string | null>(null);
+  const pasteDay = pickedDay ?? today;
+  const [pasteResult, setPasteResult] = useState<{ error?: string; pastedTo?: string }>({});
   const [isPasting, startPasting] = useTransition();
 
-  function paste(day: string, { clearAfter = false } = {}) {
+  function paste(day: string) {
     if (!copied) return;
 
-    setPasteError(null);
+    setPasteResult({});
     startPasting(async () => {
       const result = await pasteFoodLog(copied.id, day, asUserId).catch(() => null);
-      if (result?.status !== "saved") {
-        setPasteError(result?.message ?? "The meal couldn't be pasted.");
-      } else if (clearAfter) {
-        clear();
-      }
+      setPasteResult(
+        result?.status === "saved"
+          ? { pastedTo: dayLabel(day, today) }
+          : { error: result?.message ?? "The meal couldn't be pasted." },
+      );
     });
   }
   const [editingMeal, setEditingMeal] = useState<DayGroup["meals"][number] | null>(null);
@@ -343,7 +342,6 @@ export function FoodLogTree({
                 : "Glasses each day. Drinks add no calories, so log milk or sugar as a meal too"}
           </CardDescription>
         </div>
-        {aboveList}
       </div>
       <CardContent>
         {tab === "meals" && copied ? (
@@ -355,14 +353,23 @@ export function FoodLogTree({
               Copied <strong className="font-medium text-zinc-950">{copied.foodName}</strong>
             </span>
             <span className="flex items-center gap-1">
-              {pasteError ? <span className="text-status-critical-ink">{pasteError}</span> : null}
+              {pasteResult.error ? <span className="text-status-critical-ink">{pasteResult.error}</span> : null}
+              {pasteResult.pastedTo ? <span>Added to {pasteResult.pastedTo}</span> : null}
+              <Input
+                type="date"
+                aria-label="Day to paste into"
+                max={today}
+                value={pasteDay}
+                onChange={(event) => setPickedDay(event.target.value)}
+                className="h-7 w-auto px-2 text-xs"
+              />
               <Button
                 variant="secondary"
-                disabled={isPasting}
-                onClick={() => paste(today, { clearAfter: true })}
+                disabled={isPasting || !pasteDay}
+                onClick={() => paste(pasteDay)}
                 className="h-7 px-2 text-xs"
               >
-                {isPasting ? "Pasting" : "Paste to today"}
+                {isPasting ? "Pasting" : "Paste"}
               </Button>
               <button type="button" aria-label="Clear copied meal" onClick={clear} className={ROW_ICON}>
                 <X aria-hidden className="size-4" />
@@ -417,10 +424,10 @@ export function FoodLogTree({
                   asUserId={asUserId}
                   copied={copied}
                   onCopy={(meal) => {
-                    setPasteError(null);
+                    setPasteResult({});
                     copy(meal);
                   }}
-                  onPaste={(day) => paste(day)}
+                  onPaste={paste}
                   isPasting={isPasting}
                 />
               ))}

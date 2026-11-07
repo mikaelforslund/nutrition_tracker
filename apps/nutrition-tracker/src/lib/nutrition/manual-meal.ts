@@ -6,6 +6,8 @@ export type ManualMealDraft = {
   proteinG: string;
   carbsG: string;
   fatG: string;
+  /** Unset means today. */
+  day?: string;
 };
 
 export const EMPTY_MANUAL_MEAL: ManualMealDraft = {
@@ -43,6 +45,7 @@ export function manualMealToLog(draft: ManualMealDraft): FoodLogInput | null {
     carbsG: oneDecimal(carbs * draft.quantity),
     fatG: oneDecimal(fat * draft.quantity),
     imageUrl: null,
+    day: draft.day,
   });
 
   return name && log.success ? log.data : null;

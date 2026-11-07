@@ -10,6 +10,7 @@ import {
   editWorkout,
   insertFoodLog,
   insertMealCopy,
+  isFutureDay,
   insertWorkout,
   readMealSource,
   recordWeight,
@@ -24,7 +25,8 @@ import {
   weightSchema,
 } from "@/lib/nutrition/schemas";
 import { drinkChangeSchema } from "@/lib/nutrition/drinks";
-import { workoutInputSchema } from "@/lib/nutrition/workouts";
+import { parseDecimal } from "@/lib/nutrition/manual-meal";
+import { hasNoWorkoutDetails, workoutInputSchema } from "@/lib/nutrition/workouts";
 import { getStorage } from "@/lib/storage";
 import {
   createUploadKey,
@@ -37,6 +39,8 @@ import {
 import { isAllowedImageUrl } from "@/lib/vision/image";
 
 export type ActionResult = { status: "idle" | "saved" | "error"; message?: string };
+
+const FUTURE_DAY_MESSAGE = "Pick today or an earlier day.";
 
 export async function saveFoodLog(input: unknown, asUserId?: string): Promise<ActionResult> {
   const user = await getActingUser(asUserId);
@@ -54,6 +58,10 @@ export async function saveFoodLog(input: unknown, asUserId?: string): Promise<Ac
     isAllowedImageUrl(imageUrl, getEnv().VISION_ALLOWED_IMAGE_HOSTS);
   if (!imageIsTrusted) {
     return { status: "error", message: "That image can't be attached to a meal." };
+  }
+
+  if (parsed.data.day && (await isFutureDay(user.id, parsed.data.day))) {
+    return { status: "error", message: FUTURE_DAY_MESSAGE };
   }
 
   await insertFoodLog(user.id, parsed.data);
@@ -83,19 +91,29 @@ export async function updateFoodLog(
   return { status: "saved" };
 }
 
-export async function saveWeight(weightKg: unknown, asUserId?: string): Promise<ActionResult> {
+export async function saveWeight(
+  weightKg: unknown,
+  day: unknown,
+  asUserId?: string,
+): Promise<ActionResult> {
   const user = await getActingUser(asUserId);
   if (!user) return { status: "error", message: "Sign in to record your weight." };
 
   const parsed = weightSchema.safeParse(weightKg);
   if (!parsed.success) return { status: "error", message: "Enter a weight between 20 and 500 kg." };
 
-  await recordWeight(user.id, parsed.data);
+  const parsedDay = z.iso.date().safeParse(day);
+  if (!parsedDay.success) return { status: "error", message: "Pick a day for this weight." };
+  if (await isFutureDay(user.id, parsedDay.data)) {
+    return { status: "error", message: FUTURE_DAY_MESSAGE };
+  }
+
+  await recordWeight(user.id, parsed.data, parsedDay.data);
   revalidatePath("/", "layout");
   return { status: "saved" };
 }
 
-/** Adds a workout, or updates one when given an id. */
+/** Adds a workout, or updates one when given an id. A weight is saved to the same day. */
 export async function saveWorkout(
   id: string | null,
   asUserId: string | undefined,
@@ -105,18 +123,34 @@ export async function saveWorkout(
   const user = await getActingUser(asUserId);
   if (!user) return { status: "error", message: "Sign in to record workouts." };
 
-  const parsed = workoutInputSchema.safeParse(Object.fromEntries(form));
-  if (!parsed.success) {
-    return { status: "error", message: "Check the workout details and try again." };
+  const weightField = String(form.get("weightKg") ?? "").trim();
+  const weight = weightField ? weightSchema.safeParse(parseDecimal(weightField)) : null;
+  if (weight && !weight.success) {
+    return { status: "error", message: "Enter a weight between 20 and 500 kg." };
   }
 
-  if (id === null) {
-    await insertWorkout(user.id, parsed.data);
-  } else {
-    const parsedId = z.uuid().safeParse(id);
-    const updated = parsedId.success && (await editWorkout(user.id, parsedId.data, parsed.data));
-    if (!updated) return { status: "error", message: "That workout no longer exists." };
+  const day = z.iso.date().safeParse(form.get("workedOutOn"));
+  if (!day.success) return { status: "error", message: "Check the workout details and try again." };
+  if (await isFutureDay(user.id, day.data)) {
+    return { status: "error", message: FUTURE_DAY_MESSAGE };
   }
+
+  if (!weight || !hasNoWorkoutDetails(form)) {
+    const parsed = workoutInputSchema.safeParse(Object.fromEntries(form));
+    if (!parsed.success) {
+      return { status: "error", message: "Check the workout details and try again." };
+    }
+
+    if (id === null) {
+      await insertWorkout(user.id, parsed.data);
+    } else {
+      const parsedId = z.uuid().safeParse(id);
+      const updated = parsedId.success && (await editWorkout(user.id, parsedId.data, parsed.data));
+      if (!updated) return { status: "error", message: "That workout no longer exists." };
+    }
+  }
+
+  if (weight) await recordWeight(user.id, weight.data, day.data);
 
   revalidatePath("/", "layout");
   return { status: "saved" };
@@ -175,6 +209,9 @@ export async function pasteFoodLog(
 
   const parsed = pasteSchema.safeParse({ id, day });
   if (!parsed.success) return { status: "error", message: "That meal can't be pasted." };
+  if (await isFutureDay(user.id, parsed.data.day)) {
+    return { status: "error", message: FUTURE_DAY_MESSAGE };
+  }
 
   const meal = await readMealSource(user.id, parsed.data.id);
   if (!meal) return { status: "error", message: "The copied meal no longer exists." };

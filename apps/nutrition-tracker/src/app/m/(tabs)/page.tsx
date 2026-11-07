@@ -44,7 +44,7 @@ export default async function TodayPage() {
       </div>
 
       <Section>
-        <WeightRow latest={weights[weights.length - 1]?.value ?? null} />
+        <WeightRow today={today} weights={weights} />
       </Section>
 
       <DrinksSection

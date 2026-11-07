@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { z } from "zod";
-import { AddToToday } from "@/components/mobile/add-to-today";
+import { AddToDay } from "@/components/mobile/add-to-day";
 import { BackButton } from "@/components/mobile/back-button";
 import { Row, Section } from "@/components/mobile/ios";
 import { EditMealButton } from "@/components/mobile/meal-edit-sheet";
@@ -49,7 +49,7 @@ export default async function MealPage({ params }: { params: Promise<{ id: strin
       ) : null}
 
       <Section>
-        <AddToToday mealId={meal.id} today={today} />
+        <AddToDay mealId={meal.id} today={today} />
       </Section>
     </div>
   );

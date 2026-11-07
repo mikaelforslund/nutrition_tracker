@@ -18,7 +18,15 @@ const MACRO_FIELDS = [
   { key: "fatG", label: "Fat (g)" },
 ] as const;
 
-export function ManualMealDialog({ asUserId, onClose }: { asUserId?: string; onClose: () => void }) {
+export function ManualMealDialog({
+  asUserId,
+  today,
+  onClose,
+}: {
+  asUserId?: string;
+  today: string;
+  onClose: () => void;
+}) {
   const [draft, setDraft] = useState<ManualMealDraft>(EMPTY_MANUAL_MEAL);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, startSaving] = useTransition();
@@ -98,6 +106,16 @@ export function ManualMealDialog({ asUserId, onClose }: { asUserId?: string; onC
             </Field>
           ))}
         </div>
+
+        <Field label="Date">
+          <Input
+            type="date"
+            required
+            max={today}
+            value={draft.day ?? today}
+            onChange={(event) => update({ day: event.target.value })}
+          />
+        </Field>
 
         <p className="text-sm text-zinc-600">
           Total calories:{" "}

@@ -206,12 +206,19 @@ export function getDashboardData(userId: string): Promise<DashboardData> {
 
 export async function insertFoodLog(userId: string, input: FoodLogInput): Promise<void> {
   await withUser(userId, async (tx) => {
+    const { timezone } = await loadProfile(tx, userId);
+
+    // A meal on an earlier day takes the current time of day, in the person's own timezone.
     await tx`
       insert into app_nutrition.food_logs
-        (user_id, image_url, food_name, protein_g, carbs_g, fat_g)
+        (user_id, image_url, food_name, protein_g, carbs_g, fat_g, logged_at)
       values (
         ${userId}, ${input.imageUrl}, ${input.foodName},
-        ${input.proteinG}, ${input.carbsG}, ${input.fatG}
+        ${input.proteinG}, ${input.carbsG}, ${input.fatG},
+        coalesce(
+          (${input.day ?? null}::date + (now() at time zone ${timezone})::time) at time zone ${timezone},
+          now()
+        )
       )
     `;
   });
@@ -390,6 +397,14 @@ export async function readMealSource(userId: string, id: string): Promise<MealSo
   return meal as MealSource | null;
 }
 
+/** True if the day hasn't started yet in the person's own timezone. */
+export async function isFutureDay(userId: string, day: string): Promise<boolean> {
+  return withUser(userId, async (tx) => {
+    const { timezone } = await loadProfile(tx, userId);
+    return day > (await localToday(tx, timezone));
+  });
+}
+
 /**
  * Adds a copy of a meal to a day: right now for today, otherwise at the same time of
  * day in the person's own timezone, so it can't slip onto a neighbouring day.
@@ -443,20 +458,25 @@ export async function editFoodLog(
   });
 }
 
-/** Records today's weight, replacing any earlier entry today, and makes it current. */
-export async function recordWeight(userId: string, weightKg: number): Promise<void> {
+/**
+ * Records a day's weight, replacing any entry for that day. It becomes the current
+ * weight unless a later day already has one.
+ */
+export async function recordWeight(userId: string, weightKg: number, day: string): Promise<void> {
   await withUser(userId, async (tx) => {
-    const { timezone } = await loadProfile(tx, userId);
-
     await tx`
       insert into app_nutrition.weight_logs (user_id, logged_on, weight_kg)
-      values (${userId}, (now() at time zone ${timezone})::date, ${weightKg})
+      values (${userId}, ${day}::date, ${weightKg})
       on conflict (user_id, logged_on) do update set weight_kg = excluded.weight_kg
     `;
     await tx`
       update app_nutrition.user_profiles
       set current_weight_kg = ${weightKg}
       where user_id = ${userId}
+        and not exists (
+          select 1 from app_nutrition.weight_logs
+          where user_id = ${userId} and logged_on > ${day}::date
+        )
     `;
   });
 }

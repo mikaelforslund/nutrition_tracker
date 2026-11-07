@@ -26,7 +26,7 @@ export function MobileCharts({
   targetCalories: number;
 }) {
   const weightLine = useMemo(() => singleSeries("Weight", weights), [weights]);
-  const calorieLine = useMemo(() => singleSeries("Calories", calories), [calories]);
+  const calorieLine = useMemo(() => singleSeries("Net calories", calories), [calories]);
   const macroLines = useMemo(() => macroSeries(protein, carbs, fat), [protein, carbs, fat]);
   const glassesLine = useMemo(() => singleSeries("Glasses", glasses), [glasses]);
 
@@ -44,7 +44,7 @@ export function MobileCharts({
       </div>
       <div className="rounded-[10px] bg-ios-card p-3">
         <LineChart
-          title="Calories"
+          title="Net calories"
           unit="kcal"
           series={calorieLine}
           reference={targetCalories}
@@ -73,7 +73,7 @@ export function MobileCharts({
         />
       </div>
       <p className="px-4 text-[13px] text-ios-secondary">
-        Tap a chart to see that day. Calories, macros, and drinks cover the last 30 days.
+        Tap a chart to see that day. Net calories are eaten minus workouts. Calories, macros, and drinks cover the last 30 days.
       </p>
     </div>
   );

@@ -43,7 +43,7 @@ function previousDay(date: string): string {
   return result.toISOString().slice(0, 10);
 }
 
-function dayLabel(day: string, today: string): string {
+export function dayLabel(day: string, today: string): string {
   if (day === today) return "Today";
   if (day === previousDay(today)) return "Yesterday";
 
@@ -53,6 +53,11 @@ function dayLabel(day: string, today: string): string {
     day: "numeric",
     timeZone: "UTC",
   });
+}
+
+/** What the day's meals added after its workouts. Goals and charts both judge a day by this. */
+export function netCalories(group: Pick<DayGroup, "calories" | "burned">): number {
+  return group.calories - group.burned;
 }
 
 /** Groups meals by local day. Expects meals newest first, and keeps that order. */
@@ -83,7 +88,7 @@ export function groupLogsByDay(
     }
 
     group.calories += meal.calories;
-    group.goalScore = goalScore(group.calories - group.burned, targetCalories);
+    group.goalScore = goalScore(netCalories(group), targetCalories);
     group.proteinG = oneDecimal(group.proteinG + meal.proteinG);
     group.carbsG = oneDecimal(group.carbsG + meal.carbsG);
     group.fatG = oneDecimal(group.fatG + meal.fatG);

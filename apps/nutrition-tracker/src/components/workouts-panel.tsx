@@ -4,6 +4,7 @@ import { Button, Dialog, Field, Input, StatusLabel, cn } from "@trackerx/ui";
 import { Pencil, Trash2 } from "lucide-react";
 import { useActionState, useCallback, useEffect, useState, useTransition } from "react";
 import { deleteWorkout, saveWorkout, type ActionResult } from "@/app/actions";
+import type { ChartPoint } from "@/lib/nutrition/chart";
 import { WORKOUT_TYPES, type Workout } from "@/lib/nutrition/workouts";
 import { formatDuration } from "@/lib/session-summary";
 
@@ -20,17 +21,25 @@ const longDate = (day: string) =>
     timeZone: "UTC",
   });
 
-export function WorkoutDialog({
+function WorkoutDialog({
   workout,
+  weights,
   today,
   asUserId,
   onClose,
 }: {
   workout: Workout | null;
+  weights: ChartPoint[];
   today: string;
   asUserId?: string;
   onClose: () => void;
 }) {
+  const [day, setDay] = useState(workout?.day ?? today);
+  const [weight, setWeight] = useState("");
+  const recorded = weights.find((entry) => entry.day === day);
+  // A weight can be recorded alone, so it stands in for the workout's details.
+  const detailsRequired = !weight.trim();
+
   const [result, action, isPending] = useActionState(
     saveWorkout.bind(null, workout?.id ?? null, asUserId),
     INITIAL,
@@ -46,7 +55,7 @@ export function WorkoutDialog({
         <Field label="Workout type">
           <Input
             name="workoutType"
-            required
+            required={detailsRequired}
             maxLength={60}
             list="workout-types"
             defaultValue={workout?.workoutType ?? ""}
@@ -63,7 +72,7 @@ export function WorkoutDialog({
             <Input
               name="durationMinutes"
               type="number"
-              required
+              required={detailsRequired}
               min="1"
               max="1440"
               defaultValue={workout?.durationMinutes ?? ""}
@@ -73,16 +82,36 @@ export function WorkoutDialog({
             <Input
               name="caloriesBurned"
               type="number"
-              required
+              required={detailsRequired}
               min="0"
               max="10000"
               defaultValue={workout?.caloriesBurned ?? ""}
             />
           </Field>
         </div>
-        <Field label="Date">
-          <Input name="workedOutOn" type="date" required max={today} defaultValue={workout?.day ?? today} />
-        </Field>
+        <div className="grid grid-cols-2 items-start gap-3">
+          <Field label="Date">
+            <Input
+              name="workedOutOn"
+              type="date"
+              required
+              max={today}
+              value={day}
+              onChange={(event) => setDay(event.target.value)}
+            />
+          </Field>
+          {workout ? null : (
+            <Field label="Weight (kg)" hint="Optional. Fill in only this to record just your weight.">
+              <Input
+                name="weightKg"
+                inputMode="decimal"
+                value={weight}
+                placeholder={recorded ? `${recorded.value} kg` : undefined}
+                onChange={(event) => setWeight(event.target.value)}
+              />
+            </Field>
+          )}
+        </div>
         {result.status === "error" ? (
           <p role="alert">
             <StatusLabel tone="critical">{result.message}</StatusLabel>
@@ -93,7 +122,7 @@ export function WorkoutDialog({
             Cancel
           </Button>
           <Button type="submit" disabled={isPending}>
-            {isPending ? "Saving" : "Save workout"}
+            {isPending ? "Saving" : workout ? "Save workout" : "Save"}
           </Button>
         </div>
       </form>
@@ -156,10 +185,12 @@ function DeleteWorkout({ workout, asUserId }: { workout: Workout; asUserId?: str
 
 export function WorkoutsPanel({
   workouts,
+  weights,
   today,
   asUserId,
 }: {
   workouts: Workout[];
+  weights: ChartPoint[];
   today: string;
   asUserId?: string;
 }) {
@@ -233,6 +264,7 @@ export function WorkoutsPanel({
         <WorkoutDialog
           key={dialog.workout?.id ?? "new"}
           workout={dialog.workout}
+          weights={weights}
           today={today}
           asUserId={asUserId}
           onClose={closeDialog}
