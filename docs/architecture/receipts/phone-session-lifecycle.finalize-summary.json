@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "lifecycle",
+  "quality": "showcase",
+  "specification": {
+    "path": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/source/phone-session.lifecycle.json",
+    "sha256": "606e32d222f7a0fa0ac5a00e5bea7f3be1bf8758b514aa9527f425a69e073ab2",
+    "bytes": 5065
+  },
+  "artifact": {
+    "path": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/phone-session-lifecycle.html",
+    "sha256": "b6bb1eaa249692194b2369cfc9bcf77729c7ea355d3065d944db5b2811e0dd03",
+    "bytes": 820072
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/phone-session-lifecycle.finalize.json",
+    "summaryReceipt": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/phone-session-lifecycle.finalize-summary.json",
+    "browserCheckReceipt": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/phone-session-lifecycle.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-12T05:14:28.782Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 3795,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  }
+}

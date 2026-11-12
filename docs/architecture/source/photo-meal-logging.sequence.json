@@ -1,0 +1,439 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Logging a Meal from a Photo",
+    "locale": "en",
+    "output": "docs/architecture/photo-meal-logging.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "git@github.com:mikaelforslund/nutrition_tracker.git",
+      "link_mode": "local-only",
+      "revision": "a0dd5ef0320f294f107e9cc945831fa93fafdc3e"
+    }
+  },
+  "participants": [
+    {
+      "id": "person",
+      "type": "external",
+      "label": "Person",
+      "sublabel": "desktop or phone",
+      "sources": [
+        {
+          "path": "scripts/stack-phone.sh",
+          "line": 1,
+          "end_line": 36
+        }
+      ]
+    },
+    {
+      "id": "ui",
+      "type": "frontend",
+      "label": "Capture UI",
+      "sublabel": "desktop + phone",
+      "sources": [
+        {
+          "path": "apps/nutrition-tracker/src/components/food-capture.tsx",
+          "line": 31,
+          "end_line": 110,
+          "label": "desktop capture"
+        },
+        {
+          "path": "apps/nutrition-tracker/src/components/mobile/capture-sheet.tsx",
+          "line": 191,
+          "end_line": 260,
+          "label": "phone capture"
+        },
+        {
+          "path": "apps/nutrition-tracker/src/lib/vision/analyze-client.ts",
+          "line": 13,
+          "end_line": 41,
+          "label": "analyzeImage"
+        }
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Next.js server",
+      "sublabel": "route + action",
+      "sources": [
+        {
+          "path": "apps/nutrition-tracker/src/app/api/vision/analyze/route.ts",
+          "line": 58,
+          "end_line": 192,
+          "label": "POST /api/vision/analyze"
+        },
+        {
+          "path": "apps/nutrition-tracker/src/app/actions.ts",
+          "line": 45,
+          "end_line": 70,
+          "label": "saveFoodLog"
+        },
+        {
+          "path": "apps/nutrition-tracker/src/app/api/dashboard/version/route.ts",
+          "line": 12,
+          "end_line": 24,
+          "label": "version route"
+        }
+      ]
+    },
+    {
+      "id": "auth",
+      "type": "security",
+      "label": "Auth",
+      "sublabel": "getActingUser",
+      "sources": [
+        {
+          "path": "apps/nutrition-tracker/src/lib/auth.ts",
+          "line": 44,
+          "end_line": 79
+        }
+      ]
+    },
+    {
+      "id": "vision",
+      "type": "backend",
+      "label": "Vision provider",
+      "sublabel": "openai or mock",
+      "sources": [
+        {
+          "path": "apps/nutrition-tracker/src/lib/vision/index.ts",
+          "line": 8,
+          "end_line": 23
+        },
+        {
+          "path": "apps/nutrition-tracker/src/lib/vision/openai-provider.ts",
+          "line": 41,
+          "end_line": 131
+        }
+      ]
+    },
+    {
+      "id": "llm",
+      "type": "external",
+      "label": "Model server",
+      "sublabel": "Ollama qwen3.5:9b",
+      "sources": [
+        {
+          "path": "compose.yaml",
+          "line": 48,
+          "end_line": 54
+        }
+      ]
+    },
+    {
+      "id": "storage",
+      "type": "cloud",
+      "label": "Photo storage",
+      "sublabel": "disk / Supabase",
+      "sources": [
+        {
+          "path": "apps/nutrition-tracker/src/lib/storage/index.ts",
+          "line": 12,
+          "end_line": 91
+        },
+        {
+          "path": "apps/nutrition-tracker/src/lib/storage/keys.ts",
+          "line": 1,
+          "end_line": 25
+        }
+      ]
+    },
+    {
+      "id": "pg",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "food_logs (RLS)",
+      "sources": [
+        {
+          "path": "apps/nutrition-tracker/src/lib/nutrition/repository.ts",
+          "line": 207,
+          "end_line": 225,
+          "label": "insertFoodLog"
+        },
+        {
+          "path": "apps/nutrition-tracker/src/lib/db.ts",
+          "line": 27,
+          "end_line": 40,
+          "label": "withUser"
+        },
+        {
+          "path": "supabase/migrations/20261104000500_calculated_calories.sql",
+          "line": 1,
+          "end_line": 8,
+          "label": "generated calories"
+        }
+      ]
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 478,
+      "label": "Analyze the photo"
+    },
+    {
+      "from": 490,
+      "to": 718,
+      "label": "Review and save"
+    },
+    {
+      "from": 730,
+      "to": 842,
+      "label": "Live refresh"
+    }
+  ],
+  "messages": [
+    {
+      "id": "pick-photo",
+      "from": "person",
+      "to": "ui",
+      "y": 165,
+      "label": "drop / take photo"
+    },
+    {
+      "id": "post-analyze",
+      "from": "ui",
+      "to": "api",
+      "y": 193,
+      "label": "POST /api/vision/analyze",
+      "variant": "emphasis"
+    },
+    {
+      "id": "who",
+      "from": "api",
+      "to": "auth",
+      "y": 221,
+      "label": "acting user?",
+      "variant": "security"
+    },
+    {
+      "id": "who-reply",
+      "from": "auth",
+      "to": "api",
+      "y": 249,
+      "label": "user id",
+      "variant": "return"
+    },
+    {
+      "id": "analyze",
+      "from": "api",
+      "to": "vision",
+      "y": 277,
+      "label": "analyze(NUTRITION)",
+      "note": "Size (8 MB) and JPEG/PNG/WebP magic bytes are checked first"
+    },
+    {
+      "id": "chat",
+      "from": "vision",
+      "to": "llm",
+      "y": 337,
+      "label": "chat/completions",
+      "variant": "emphasis",
+      "note": "Shrunk to 512 px JPEG, JSON schema, temperature 0"
+    },
+    {
+      "id": "chat-reply",
+      "from": "llm",
+      "to": "vision",
+      "y": 405,
+      "label": "isFood + macros",
+      "variant": "return"
+    },
+    {
+      "id": "result",
+      "from": "vision",
+      "to": "api",
+      "y": 433,
+      "label": "kcal = 4p+4c+9f",
+      "variant": "return"
+    },
+    {
+      "id": "put-photo",
+      "from": "api",
+      "to": "storage",
+      "y": 461,
+      "label": "put user/uuid.jpg"
+    },
+    {
+      "id": "analyze-reply",
+      "from": "api",
+      "to": "ui",
+      "y": 505,
+      "label": "200 imageUrl + analysis",
+      "variant": "return"
+    },
+    {
+      "id": "draft",
+      "from": "ui",
+      "to": "person",
+      "y": 533,
+      "label": "editable draft",
+      "variant": "return"
+    },
+    {
+      "id": "save",
+      "from": "person",
+      "to": "ui",
+      "y": 561,
+      "label": "edit + Save"
+    },
+    {
+      "id": "save-action",
+      "from": "ui",
+      "to": "api",
+      "y": 589,
+      "label": "saveFoodLog(draft)",
+      "variant": "emphasis",
+      "note": "Image must be the user's own upload or an allowed host"
+    },
+    {
+      "id": "insert",
+      "from": "api",
+      "to": "pg",
+      "y": 649,
+      "label": "INSERT via withUser",
+      "variant": "emphasis"
+    },
+    {
+      "id": "insert-ok",
+      "from": "pg",
+      "to": "api",
+      "y": 677,
+      "label": "row + generated kcal",
+      "variant": "return"
+    },
+    {
+      "id": "saved",
+      "from": "api",
+      "to": "ui",
+      "y": 705,
+      "label": "saved, revalidate /",
+      "variant": "return"
+    },
+    {
+      "id": "poll",
+      "from": "ui",
+      "to": "api",
+      "y": 745,
+      "label": "GET version (3 s)",
+      "variant": "dashed"
+    },
+    {
+      "id": "fingerprint",
+      "from": "api",
+      "to": "pg",
+      "y": 773,
+      "label": "md5 of recent rows",
+      "variant": "dashed"
+    },
+    {
+      "id": "fingerprint-reply",
+      "from": "pg",
+      "to": "api",
+      "y": 801,
+      "label": "new version",
+      "variant": "return"
+    },
+    {
+      "id": "refresh",
+      "from": "api",
+      "to": "ui",
+      "y": 829,
+      "label": "changed: refresh",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "ui",
+      "from": 188,
+      "to": 538,
+      "type": "frontend"
+    },
+    {
+      "participant": "api",
+      "from": 193,
+      "to": 510,
+      "type": "backend"
+    },
+    {
+      "participant": "auth",
+      "from": 216,
+      "to": 254,
+      "type": "security"
+    },
+    {
+      "participant": "vision",
+      "from": 277,
+      "to": 438,
+      "type": "backend"
+    },
+    {
+      "participant": "llm",
+      "from": 332,
+      "to": 410,
+      "type": "external"
+    },
+    {
+      "participant": "storage",
+      "from": 456,
+      "to": 476,
+      "type": "cloud"
+    },
+    {
+      "participant": "api",
+      "from": 589,
+      "to": 710,
+      "type": "backend"
+    },
+    {
+      "participant": "pg",
+      "from": 644,
+      "to": 682,
+      "type": "database"
+    },
+    {
+      "participant": "api",
+      "from": 745,
+      "to": 834,
+      "type": "backend"
+    },
+    {
+      "participant": "pg",
+      "from": 768,
+      "to": 806,
+      "type": "database"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Failure exits",
+      "items": [
+        "No acting user: 401 UNAUTHENTICATED. Wrong type: 415. Over 8 MB: 413. No Content-Length: 411.",
+        "isFood false or undecodable image: 422 IMAGE_NOT_RECOGNIZED, 'That photo doesn't look like food.'",
+        "Any other provider error: 502 INFERENCE_FAILED. Cancel aborts the request and nothing is stored."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Trust boundaries",
+      "items": [
+        "The model's output is parsed against the zod contract before it is returned.",
+        "Calories are never taken from the model or the person: both the server and Postgres compute them.",
+        "The photo is stored only after a successful analysis, under the acting user's id."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Variants",
+      "items": [
+        "Manual entry skips analysis: per-serving macros x quantity go straight to saveFoodLog.",
+        "VISION_PROVIDER=mock returns one of six canned plates picked by the image's SHA-256.",
+        "A JSON body with an https imageUrl on VISION_ALLOWED_IMAGE_HOSTS skips the upload step."
+      ]
+    }
+  ]
+}

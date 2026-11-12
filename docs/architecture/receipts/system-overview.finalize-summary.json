@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/source/system-overview.architecture.json",
+    "sha256": "e6b520fdbbf0e88b8b0dd0b5d123fe0aee50bc6db194b93a614e332a67677502",
+    "bytes": 7721
+  },
+  "artifact": {
+    "path": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/system-overview.html",
+    "sha256": "6909f69f9816255ecbb445443955c280f51696a54072eca23296adb2167b50f0",
+    "bytes": 830155
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/system-overview.finalize.json",
+    "summaryReceipt": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/system-overview.finalize-summary.json",
+    "browserCheckReceipt": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/system-overview.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-12T05:14:28.782Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 5099,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  }
+}

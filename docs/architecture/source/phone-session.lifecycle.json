@@ -1,0 +1,121 @@
+{
+  "schema_version": 3,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Phone Session Lifecycle (AUTH_MODE=mock)",
+    "locale": "en",
+    "output": "docs/architecture/phone-session-lifecycle.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "git@github.com:mikaelforslund/nutrition_tracker.git",
+      "link_mode": "local-only",
+      "revision": "a0dd5ef0320f294f107e9cc945831fa93fafdc3e"
+    }
+  },
+  "mainPath": ["signed_out", "active", "ended"],
+  "states": [
+    {
+      "id": "signed_out",
+      "type": "start",
+      "label": "No session",
+      "sublabel": "/m/sign-in",
+      "tag": "no m-session",
+      "sources": [
+        { "path": "apps/nutrition-tracker/src/lib/mobile-session.ts", "line": 9, "end_line": 21, "label": "redirect to sign-in" },
+        { "path": "apps/nutrition-tracker/src/app/m/sign-in/page.tsx", "line": 15, "end_line": 30 }
+      ]
+    },
+    {
+      "id": "active",
+      "type": "active",
+      "label": "Active",
+      "sublabel": "used < 5 min ago",
+      "tag": "ended_at null",
+      "sources": [
+        { "path": "apps/nutrition-tracker/src/lib/sessions.ts", "line": 72, "end_line": 108, "label": "openSession upsert" },
+        { "path": "apps/nutrition-tracker/src/lib/sessions.ts", "line": 149, "end_line": 164, "label": "resolveSession" },
+        { "path": "apps/nutrition-tracker/src/lib/session-summary.ts", "line": 1, "end_line": 15, "label": "status rule" }
+      ]
+    },
+    {
+      "id": "inactive",
+      "type": "waiting",
+      "label": "Inactive",
+      "sublabel": "open, idle >= 5 min",
+      "tag": "ended_at null",
+      "sources": [{ "path": "apps/nutrition-tracker/src/lib/session-summary.ts", "line": 1, "end_line": 15 }]
+    },
+    {
+      "id": "ended",
+      "type": "neutral",
+      "label": "Ended",
+      "sublabel": "row kept for history",
+      "tag": "ended_at set",
+      "sources": [
+        { "path": "apps/nutrition-tracker/src/lib/sessions.ts", "line": 166, "end_line": 174, "label": "endSession" },
+        { "path": "apps/nutrition-tracker/src/app/m/actions.ts", "line": 84, "end_line": 96, "label": "switchPerson" },
+        { "path": "apps/nutrition-tracker/src/app/session-actions.ts", "line": 36, "end_line": 40, "label": "End session" }
+      ]
+    },
+    {
+      "id": "erased",
+      "type": "neutral",
+      "label": "Erased",
+      "sublabel": "row deleted, data kept",
+      "tag": "terminal",
+      "sources": [
+        { "path": "apps/nutrition-tracker/src/lib/sessions.ts", "line": 176, "end_line": 180, "label": "eraseSession" },
+        { "path": "apps/nutrition-tracker/src/app/session-actions.ts", "line": 41, "end_line": 45 }
+      ]
+    },
+    {
+      "id": "person_deleted",
+      "type": "failure",
+      "label": "Person deleted",
+      "sublabel": "cascade: meals + photos",
+      "tag": "terminal",
+      "sources": [
+        { "path": "apps/nutrition-tracker/src/lib/sessions.ts", "line": 182, "end_line": 194, "label": "removePerson" },
+        { "path": "apps/nutrition-tracker/src/app/session-actions.ts", "line": 46, "end_line": 72, "label": "deletePerson" }
+      ]
+    }
+  ],
+  "transitions": [
+    { "id": "sign-in", "from": "signed_out", "to": "active", "label": "pick / add name", "variant": "emphasis", "note": "choosePerson or addPerson upserts the row for (user, device)" },
+    { "id": "switch", "from": "active", "to": "ended", "label": "Switch Person", "note": "Also ended from the dashboard's End session" },
+    { "id": "idle", "from": "active", "to": "inactive", "label": "idle 5 min", "variant": "dashed" },
+    { "id": "wake", "from": "inactive", "to": "active", "label": "next request" },
+    { "id": "end-idle", "from": "inactive", "to": "ended", "label": "End session" },
+    { "id": "reopen", "from": "ended", "to": "active", "label": "same person + device", "note": "openSession clears ended_at on the existing row" },
+    { "id": "erase", "from": "ended", "to": "erased", "label": "Remove from list" },
+    { "id": "delete", "from": "active", "to": "person_deleted", "label": "Delete person", "variant": "security" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Cookies",
+      "items": [
+        "m-device: a uuid made at first sign-in; one session per (person, device).",
+        "m-session: the session id; resolveSession bumps last_seen_at at most every 30 s.",
+        "m-last-person: lets the sign-in screen offer only this device's last person."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Safety rules",
+      "items": [
+        "An ended or erased m-session gives no user; it never falls back to MOCK_USER_ID.",
+        "The demo user (MOCK_USER_ID) can't be deleted.",
+        "There is no password: anyone on the network can pick any name (AUTH PLACEHOLDER)."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Also possible",
+      "items": [
+        "Remove from list and Delete person work from any state on the dashboard's session menu.",
+        "With AUTH_MODE=supabase none of this exists; /m pages redirect to /login."
+      ]
+    }
+  ]
+}

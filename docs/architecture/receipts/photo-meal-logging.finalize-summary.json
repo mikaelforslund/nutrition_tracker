@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "sequence",
+  "quality": "showcase",
+  "specification": {
+    "path": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/source/photo-meal-logging.sequence.json",
+    "sha256": "2045f76cbc1bd75a12755f8e55580bd15497231c2c50499881422a9f7962534d",
+    "bytes": 9911
+  },
+  "artifact": {
+    "path": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/photo-meal-logging.html",
+    "sha256": "50b2fbb6b42b528f01cc04034131678685c5b2b0ef2dd55d2c3bb15a0040caf2",
+    "bytes": 833103
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/photo-meal-logging.finalize.json",
+    "summaryReceipt": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/photo-meal-logging.finalize-summary.json",
+    "browserCheckReceipt": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/photo-meal-logging.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-12T05:14:28.782Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 4456,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  }
+}

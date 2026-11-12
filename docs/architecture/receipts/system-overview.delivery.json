@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "eb1d100a-82ff-4514-a282-ad41f93690aa",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/source/system-overview.architecture.json",
+  "output": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/system-overview.html",
+  "specification": {
+    "sha256": "e6b520fdbbf0e88b8b0dd0b5d123fe0aee50bc6db194b93a614e332a67677502",
+    "bytes": 7721
+  },
+  "artifact": {
+    "sha256": "6909f69f9816255ecbb445443955c280f51696a54072eca23296adb2167b50f0",
+    "bytes": 830155
+  }
+}

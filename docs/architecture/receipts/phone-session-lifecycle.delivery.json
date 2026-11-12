@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "a460a668-7842-4403-87df-dc7f64e1ef2c",
+  "status": "current",
+  "command": "deliver",
+  "type": "lifecycle",
+  "input": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/source/phone-session.lifecycle.json",
+  "output": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/phone-session-lifecycle.html",
+  "specification": {
+    "sha256": "606e32d222f7a0fa0ac5a00e5bea7f3be1bf8758b514aa9527f425a69e073ab2",
+    "bytes": 5065
+  },
+  "artifact": {
+    "sha256": "b6bb1eaa249692194b2369cfc9bcf77729c7ea355d3065d944db5b2811e0dd03",
+    "bytes": 820072
+  }
+}

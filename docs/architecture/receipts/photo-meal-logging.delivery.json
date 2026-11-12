@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "55145b7e-6d9a-4127-be94-e01a8159d0a9",
+  "status": "current",
+  "command": "deliver",
+  "type": "sequence",
+  "input": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/source/photo-meal-logging.sequence.json",
+  "output": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/photo-meal-logging.html",
+  "specification": {
+    "sha256": "2045f76cbc1bd75a12755f8e55580bd15497231c2c50499881422a9f7962534d",
+    "bytes": 9911
+  },
+  "artifact": {
+    "sha256": "50b2fbb6b42b528f01cc04034131678685c5b2b0ef2dd55d2c3bb15a0040caf2",
+    "bytes": 833103
+  }
+}

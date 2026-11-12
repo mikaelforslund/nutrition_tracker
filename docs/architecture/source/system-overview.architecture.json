@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "TrackerX Nutrition Tracker: System Overview",
+    "locale": "en",
+    "output": "docs/architecture/system-overview.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "git@github.com:mikaelforslund/nutrition_tracker.git",
+      "link_mode": "local-only",
+      "revision": "a0dd5ef0320f294f107e9cc945831fa93fafdc3e"
+    }
+  },
+  "components": [
+    {
+      "id": "people",
+      "type": "external",
+      "label": "People",
+      "sublabel": "desktop + iPhone PWA",
+      "pos": [40, 200],
+      "size": [130, 60],
+      "sources": [
+        { "path": "scripts/stack-phone.sh", "line": 1, "end_line": 36, "label": "phone mode on LAN" },
+        { "path": "apps/nutrition-tracker/src/app/manifest.ts", "line": 3, "end_line": 16, "label": "PWA manifest" }
+      ]
+    },
+    {
+      "id": "web",
+      "type": "frontend",
+      "label": "Next.js UI",
+      "sublabel": "dashboard / + phone /m",
+      "pos": [290, 200],
+      "size": [150, 60],
+      "sources": [
+        { "path": "apps/nutrition-tracker/src/app/(dashboard)/page.tsx", "line": 89, "end_line": 267, "label": "desktop dashboard" },
+        { "path": "apps/nutrition-tracker/src/app/m/(tabs)/page.tsx", "line": 15, "end_line": 71, "label": "phone Today tab" },
+        { "path": "apps/nutrition-tracker/src/components/live-refresh.tsx", "line": 11, "end_line": 41, "label": "3 s version poll" }
+      ]
+    },
+    {
+      "id": "server",
+      "type": "backend",
+      "label": "Actions + API routes",
+      "sublabel": "Next.js 16, Node runtime",
+      "pos": [560, 200],
+      "size": [170, 60],
+      "sources": [
+        { "path": "apps/nutrition-tracker/src/app/actions.ts", "line": 45, "end_line": 70, "label": "saveFoodLog" },
+        { "path": "apps/nutrition-tracker/src/app/api/vision/analyze/route.ts", "line": 129, "end_line": 192, "label": "POST /api/vision/analyze" },
+        { "path": "apps/nutrition-tracker/src/app/api/dashboard/version/route.ts", "line": 12, "end_line": 24, "label": "version fingerprint" }
+      ]
+    },
+    {
+      "id": "auth",
+      "type": "security",
+      "label": "Auth resolver",
+      "sublabel": "mock session / Supabase JWT",
+      "pos": [560, 60],
+      "size": [170, 60],
+      "sources": [
+        { "path": "apps/nutrition-tracker/src/lib/auth.ts", "line": 44, "end_line": 79, "label": "current + acting user" },
+        { "path": "apps/nutrition-tracker/src/lib/sessions.ts", "line": 149, "end_line": 164, "label": "resolveSession" },
+        { "path": "apps/nutrition-tracker/src/proxy.ts", "line": 15, "end_line": 48, "label": "token refresh proxy" }
+      ]
+    },
+    {
+      "id": "supa_auth",
+      "type": "external",
+      "label": "Supabase Auth",
+      "sublabel": "email code + JWKS",
+      "pos": [290, 60],
+      "size": [150, 60],
+      "tag": "supabase mode",
+      "sources": [
+        { "path": "apps/nutrition-tracker/src/app/login/actions.ts", "line": 28, "end_line": 66, "label": "OTP request + verify" },
+        { "path": "apps/nutrition-tracker/src/lib/auth.ts", "line": 13, "end_line": 41, "label": "JWT verification" }
+      ]
+    },
+    {
+      "id": "storage",
+      "type": "cloud",
+      "label": "Photo storage",
+      "sublabel": "local disk / Supabase bucket",
+      "pos": [840, 60],
+      "size": [170, 60],
+      "sources": [
+        { "path": "apps/nutrition-tracker/src/lib/storage/index.ts", "line": 12, "end_line": 91, "label": "local + Supabase drivers" },
+        { "path": "apps/nutrition-tracker/src/app/api/uploads/[...key]/route.ts", "line": 9, "end_line": 36, "label": "GET /api/uploads" }
+      ]
+    },
+    {
+      "id": "data",
+      "type": "backend",
+      "label": "Data access",
+      "sublabel": "withUser (RLS) + server SQL",
+      "pos": [840, 200],
+      "size": [170, 60],
+      "sources": [
+        { "path": "apps/nutrition-tracker/src/lib/db.ts", "line": 8, "end_line": 40, "label": "pool + withUser" },
+        { "path": "apps/nutrition-tracker/src/lib/nutrition/repository.ts", "line": 107, "end_line": 205, "label": "getDashboardData" },
+        { "path": "apps/nutrition-tracker/src/lib/sessions.ts", "line": 72, "end_line": 108, "label": "server-only session SQL" }
+      ]
+    },
+    {
+      "id": "pg",
+      "type": "database",
+      "label": "PostgreSQL 17",
+      "sublabel": "app_nutrition + auth",
+      "pos": [1130, 200],
+      "size": [150, 60],
+      "sources": [
+        { "path": "supabase/migrations/20261104000000_app_nutrition.sql", "line": 1, "end_line": 70, "label": "schema + RLS" },
+        { "path": "compose.yaml", "line": 13, "end_line": 34, "label": "local db service" }
+      ]
+    },
+    {
+      "id": "vision",
+      "type": "backend",
+      "label": "Vision provider",
+      "sublabel": "OpenAI-compatible / mock",
+      "pos": [560, 360],
+      "size": [170, 60],
+      "sources": [
+        { "path": "apps/nutrition-tracker/src/lib/vision/index.ts", "line": 8, "end_line": 23, "label": "provider selection" },
+        { "path": "apps/nutrition-tracker/src/lib/vision/openai-provider.ts", "line": 62, "end_line": 131, "label": "shrink + chat/completions" },
+        { "path": "apps/nutrition-tracker/src/lib/vision/mock-provider.ts", "line": 44, "end_line": 58, "label": "hash-picked plates" }
+      ]
+    },
+    {
+      "id": "llm",
+      "type": "external",
+      "label": "Ollama / vLLM",
+      "sublabel": "qwen3.5:9b by default",
+      "pos": [860, 360],
+      "size": [150, 60],
+      "sources": [
+        { "path": "compose.yaml", "line": 48, "end_line": 54, "label": "VISION_BASE_URL default" }
+      ]
+    }
+  ],
+  "connections": [
+    { "id": "people-web", "from": "people", "to": "web", "label": "browser / PWA", "variant": "emphasis" },
+    { "id": "web-server", "from": "web", "to": "server", "label": "actions + fetch", "variant": "emphasis" },
+    { "id": "server-data", "from": "server", "to": "data", "label": "user id", "variant": "emphasis" },
+    { "id": "data-pg", "from": "data", "to": "pg", "label": "SQL (RLS)", "variant": "emphasis" },
+    { "id": "server-auth", "from": "server", "to": "auth", "label": "who is acting?", "variant": "security" },
+    { "id": "auth-supa", "from": "auth", "to": "supa_auth", "label": "JWKS + OTP", "variant": "security" },
+    { "id": "server-vision", "from": "server", "to": "vision", "label": "analyze photo" },
+    { "id": "vision-llm", "from": "vision", "to": "llm", "label": "OpenAI API", "variant": "dashed" },
+    { "id": "server-storage", "from": "server", "to": "storage", "label": "put / get photo" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Main journey",
+      "items": [
+        "A photo goes to POST /api/vision/analyze; the model's macros come back as an editable draft.",
+        "saveFoodLog stores the meal; Postgres computes calories from the macros.",
+        "Open pages poll /api/dashboard/version every 3 s and refresh when it changes."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Two auth modes",
+      "items": [
+        "AUTH_MODE=mock: a person picks a name; the m-session cookie maps to device_sessions.",
+        "AUTH_MODE=supabase: email code sign-in; the proxy refreshes the JWT cookies.",
+        "Sessions, groups, settings and the database viewer's admin view exist only in mock mode."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Data rules",
+      "items": [
+        "withUser sets the JWT claims and the authenticated role, so row level security applies.",
+        "Server-only tables (sessions, groups, app_settings) have RLS with no policies.",
+        "Vision settings saved on the Settings page override the VISION_* environment."
+      ]
+    }
+  ]
+}

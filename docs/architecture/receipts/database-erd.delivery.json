@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "8ed8d76f-250e-47da-b7f4-ae5bc1c4f1d1",
+  "status": "current",
+  "command": "deliver",
+  "type": "erd",
+  "input": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/source/database.erd.json",
+  "output": "/Users/mikaelforslund/Projects/trackerX/docs/architecture/database-erd.html",
+  "specification": {
+    "sha256": "912ff845675f8b9f609fadc9ca73edceea4c09f89a421dcd732e2a7d44174b6a",
+    "bytes": 14373
+  },
+  "artifact": {
+    "sha256": "997cd38d867ce37650ccea164a943ffbff3d9d19a343b2b5e7ded0abba3f87a8",
+    "bytes": 863806
+  }
+}

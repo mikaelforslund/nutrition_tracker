@@ -1,0 +1,630 @@
+{
+  "schema_version": 1,
+  "diagram_type": "erd",
+  "meta": {
+    "title": "TrackerX Database Schema (app_nutrition + auth)",
+    "locale": "en",
+    "output": "docs/architecture/database-erd.html",
+    "quality_profile": "standard",
+    "repository": {
+      "url": "git@github.com:mikaelforslund/nutrition_tracker.git",
+      "link_mode": "local-only",
+      "revision": "a0dd5ef0320f294f107e9cc945831fa93fafdc3e"
+    },
+    "views": [
+      {
+        "id": "tracking",
+        "label": "Daily tracking",
+        "focus": [
+          "food_logs",
+          "weight_logs",
+          "workouts",
+          "drink_logs",
+          "users"
+        ],
+        "note": "Everything a person logs. Each row belongs to one auth.users id and is protected by RLS."
+      },
+      {
+        "id": "sessions",
+        "label": "Phone sessions (mock mode)",
+        "focus": [
+          "device_sessions",
+          "person_groups",
+          "session_groups",
+          "users"
+        ],
+        "note": "Server-only tables: RLS on, no policies, no grants."
+      },
+      {
+        "id": "identity",
+        "label": "Identity and goals",
+        "focus": [
+          "users",
+          "user_profiles"
+        ],
+        "note": "auth.users is Supabase's table; locally a shim creates it."
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "gapX": 64,
+    "gapY": 40
+  },
+  "entities": [
+    {
+      "id": "users",
+      "label": "auth.users",
+      "tag": "identity",
+      "row": 0,
+      "col": 0,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "key": "uk"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "infra/local/initdb/00_supabase_shim.sql",
+          "line": 11,
+          "end_line": 15,
+          "label": "local shim"
+        }
+      ]
+    },
+    {
+      "id": "user_profiles",
+      "label": "user_profiles",
+      "tag": "identity",
+      "row": 1,
+      "col": 0,
+      "width": 272,
+      "attributes": [
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "users.id"
+        },
+        {
+          "name": "display_name",
+          "type": "text (1-40)",
+          "key": "uk"
+        },
+        {
+          "name": "target_calories",
+          "type": "int = 2000"
+        },
+        {
+          "name": "target_protein_g",
+          "type": "int = 130"
+        },
+        {
+          "name": "target_carbs_g",
+          "type": "int = 220"
+        },
+        {
+          "name": "target_fat_g",
+          "type": "int = 65"
+        },
+        {
+          "name": "target_glasses",
+          "type": "int = 8"
+        },
+        {
+          "name": "current_weight_kg",
+          "type": "numeric(5,2)"
+        },
+        {
+          "name": "goal_weight_kg",
+          "type": "numeric(5,2)"
+        },
+        {
+          "name": "timezone",
+          "type": "text = 'UTC'"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "supabase/migrations/20261104000000_app_nutrition.sql",
+          "line": 22,
+          "end_line": 43
+        },
+        {
+          "path": "supabase/migrations/20261104000200_device_sessions.sql",
+          "line": 4,
+          "end_line": 8,
+          "label": "display_name"
+        },
+        {
+          "path": "supabase/migrations/20261104001200_target_glasses.sql",
+          "line": 1,
+          "end_line": 2,
+          "label": "target_glasses"
+        }
+      ]
+    },
+    {
+      "id": "food_logs",
+      "label": "food_logs",
+      "tag": "tracking",
+      "row": 0,
+      "col": 1,
+      "width": 258,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "users.id"
+        },
+        {
+          "name": "image_url",
+          "type": "text"
+        },
+        {
+          "name": "food_name",
+          "type": "text (1-200)"
+        },
+        {
+          "name": "protein_g",
+          "type": "numeric(6,1)"
+        },
+        {
+          "name": "carbs_g",
+          "type": "numeric(6,1)"
+        },
+        {
+          "name": "fat_g",
+          "type": "numeric(6,1)"
+        },
+        {
+          "name": "calories",
+          "type": "int generated 4p+4c+9f"
+        },
+        {
+          "name": "notes",
+          "type": "text (<=2000)"
+        },
+        {
+          "name": "logged_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "supabase/migrations/20261104000000_app_nutrition.sql",
+          "line": 49,
+          "end_line": 63
+        },
+        {
+          "path": "supabase/migrations/20261104000500_calculated_calories.sql",
+          "line": 1,
+          "end_line": 8,
+          "label": "generated calories"
+        },
+        {
+          "path": "supabase/migrations/20261104000100_food_log_notes.sql",
+          "line": 1,
+          "end_line": 2,
+          "label": "notes"
+        }
+      ]
+    },
+    {
+      "id": "weight_logs",
+      "label": "weight_logs",
+      "tag": "tracking",
+      "row": 0,
+      "col": 2,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "users.id"
+        },
+        {
+          "name": "logged_on",
+          "type": "date"
+        },
+        {
+          "name": "weight_kg",
+          "type": "numeric(5,2)"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "supabase/migrations/20261104000700_weight_logs.sql",
+          "line": 1,
+          "end_line": 9
+        }
+      ]
+    },
+    {
+      "id": "workouts",
+      "label": "workouts",
+      "tag": "tracking",
+      "row": 1,
+      "col": 1,
+      "width": 250,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "users.id"
+        },
+        {
+          "name": "worked_out_on",
+          "type": "date"
+        },
+        {
+          "name": "workout_type",
+          "type": "text (1-60)"
+        },
+        {
+          "name": "duration_minutes",
+          "type": "int (1-1440)"
+        },
+        {
+          "name": "calories_burned",
+          "type": "int (0-10000)"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "supabase/migrations/20261104000800_workouts.sql",
+          "line": 1,
+          "end_line": 13
+        }
+      ]
+    },
+    {
+      "id": "drink_logs",
+      "label": "drink_logs",
+      "tag": "tracking",
+      "row": 1,
+      "col": 2,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "users.id"
+        },
+        {
+          "name": "drunk_on",
+          "type": "date"
+        },
+        {
+          "name": "drink_type",
+          "type": "water|coffee|tea|other"
+        },
+        {
+          "name": "glasses",
+          "type": "int (1-50)"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "supabase/migrations/20261104001000_drink_logs.sql",
+          "line": 1,
+          "end_line": 11
+        }
+      ],
+      "width": 270
+    },
+    {
+      "id": "device_sessions",
+      "label": "device_sessions",
+      "tag": "sessions",
+      "row": 0,
+      "col": 3,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "users.id"
+        },
+        {
+          "name": "device_id",
+          "type": "uuid"
+        },
+        {
+          "name": "device_label",
+          "type": "text (1-100)"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "last_seen_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "ended_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "supabase/migrations/20261104000200_device_sessions.sql",
+          "line": 14,
+          "end_line": 26
+        },
+        {
+          "path": "supabase/migrations/20261104000300_session_history.sql",
+          "line": 1,
+          "end_line": 2,
+          "label": "ended_at"
+        },
+        {
+          "path": "supabase/migrations/20261104000400_session_devices.sql",
+          "line": 1,
+          "end_line": 5,
+          "label": "device_id"
+        }
+      ]
+    },
+    {
+      "id": "person_groups",
+      "label": "person_groups",
+      "tag": "sessions",
+      "row": 1,
+      "col": 3,
+      "attributes": [
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "users.id"
+        },
+        {
+          "name": "group_id",
+          "type": "uuid",
+          "key": "fk",
+          "references": "session_groups.id"
+        }
+      ],
+      "sources": [
+        {
+          "path": "supabase/migrations/20261104001100_session_groups.sql",
+          "line": 11,
+          "end_line": 21
+        }
+      ]
+    },
+    {
+      "id": "session_groups",
+      "label": "session_groups",
+      "tag": "sessions",
+      "row": 2,
+      "col": 3,
+      "attributes": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "key": "pk"
+        },
+        {
+          "name": "name",
+          "type": "text (1-40)",
+          "key": "uk"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "supabase/migrations/20261104001100_session_groups.sql",
+          "line": 1,
+          "end_line": 9
+        }
+      ]
+    },
+    {
+      "id": "app_settings",
+      "label": "app_settings",
+      "tag": "config",
+      "row": 0,
+      "col": 4,
+      "attributes": [
+        {
+          "name": "key",
+          "type": "text",
+          "key": "pk"
+        },
+        {
+          "name": "value",
+          "type": "text"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz"
+        }
+      ],
+      "sources": [
+        {
+          "path": "supabase/migrations/20261104000900_app_settings.sql",
+          "line": 1,
+          "end_line": 10
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "profile_user",
+      "from": "user_profiles",
+      "to": "users",
+      "label": "profile of",
+      "fromCardinality": "one",
+      "toCardinality": "one"
+    },
+    {
+      "id": "food_user",
+      "from": "food_logs",
+      "to": "users",
+      "label": "eaten by",
+      "fromCardinality": "many",
+      "fromOptional": true,
+      "toCardinality": "one",
+      "toSide": "right"
+    },
+    {
+      "id": "weight_user",
+      "from": "weight_logs",
+      "to": "users",
+      "fromCardinality": "many",
+      "fromOptional": true,
+      "toCardinality": "one",
+      "toSide": "top"
+    },
+    {
+      "id": "workout_user",
+      "from": "workouts",
+      "to": "users",
+      "fromCardinality": "many",
+      "fromOptional": true,
+      "toCardinality": "one",
+      "toSide": "right"
+    },
+    {
+      "id": "drink_user",
+      "from": "drink_logs",
+      "to": "users",
+      "fromCardinality": "many",
+      "fromOptional": true,
+      "toCardinality": "one",
+      "toSide": "top"
+    },
+    {
+      "id": "session_user",
+      "from": "device_sessions",
+      "to": "users",
+      "label": "device of",
+      "fromCardinality": "many",
+      "fromOptional": true,
+      "toCardinality": "one",
+      "toSide": "top"
+    },
+    {
+      "id": "member_user",
+      "from": "person_groups",
+      "to": "users",
+      "fromCardinality": "one",
+      "fromOptional": true,
+      "toCardinality": "one",
+      "toSide": "top"
+    },
+    {
+      "id": "member_group",
+      "from": "person_groups",
+      "to": "session_groups",
+      "label": "member of",
+      "fromCardinality": "many",
+      "fromOptional": true,
+      "toCardinality": "one"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Ownership and RLS",
+      "items": [
+        "Every table references auth.users(id) with on delete cascade, so deleting a person removes all their rows.",
+        "Tracking tables have select/insert/update/delete policies on user_id = auth.uid() for the authenticated role.",
+        "device_sessions, session_groups, person_groups and app_settings have RLS on with no policies: server code only."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Unique rules not drawn as keys",
+      "items": [
+        "weight_logs: one row per (user_id, logged_on); a second weigh-in replaces the first.",
+        "drink_logs: one row per (user_id, drunk_on, drink_type); glasses count up and down.",
+        "device_sessions: one row per (user_id, device_id); display_name and group name are unique case-insensitively."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Derived values",
+      "items": [
+        "food_logs.calories is generated: round(protein*4 + carbs*4 + fat*9).",
+        "user_profiles.updated_at is set by a trigger and feeds the dashboard version fingerprint.",
+        "app_settings keys: vision.provider, vision.base_url, vision.model, vision.api_key."
+      ]
+    }
+  ]
+}
