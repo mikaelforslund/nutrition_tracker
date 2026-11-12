@@ -10,7 +10,7 @@ Each box links back to the source lines it was drawn from (commit `a0dd5ef`).
 | [Logging a meal from a photo](photo-meal-logging.html) | The request sequence from photo to saved meal, including the live dashboard refresh. |
 | [Phone session lifecycle](phone-session-lifecycle.html) | How a phone session (`AUTH_MODE=mock`) moves between Active, Inactive, Ended and Erased. |
 
-The full written specification is in [../SPECIFICATION.md](../SPECIFICATION.md).
+The full written specification is in [SPECIFICATION.md](../../SPECIFICATION.md).
 
 ## Editing
 

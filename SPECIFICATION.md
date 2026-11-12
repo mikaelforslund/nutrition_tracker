@@ -25,23 +25,23 @@ The rules that follow apply:
 Each requirement has an identifier, for example `DB-001`.
 Use the identifiers to trace tests to requirements.
 
-| Prefix | Subject |
-| --- | --- |
-| `REPO` | Repository and tools |
-| `DB` | Database |
-| `ENV` | Configuration |
+| Prefix | Subject                     |
+| ------ | --------------------------- |
+| `REPO` | Repository and tools        |
+| `DB`   | Database                    |
+| `ENV`  | Configuration               |
 | `AUTH` | Authentication and sessions |
-| `CALC` | Calculations |
-| `VIS` | Vision analysis |
-| `STO` | Photo storage |
-| `API` | HTTP routes |
-| `ACT` | Server actions |
-| `DSK` | Desktop dashboard |
-| `MOB` | Phone app |
-| `ADM` | Administration tools |
-| `SEC` | Security |
-| `OPS` | Build, run and deploy |
-| `TST` | Tests |
+| `CALC` | Calculations                |
+| `VIS`  | Vision analysis             |
+| `STO`  | Photo storage               |
+| `API`  | HTTP routes                 |
+| `ACT`  | Server actions              |
+| `DSK`  | Desktop dashboard           |
+| `MOB`  | Phone app                   |
+| `ADM`  | Administration tools        |
+| `SEC`  | Security                    |
+| `OPS`  | Build, run and deploy       |
+| `TST`  | Tests                       |
 
 ---
 
@@ -71,10 +71,10 @@ The system has these parts:
 
 The system has two authentication modes. The variable `AUTH_MODE` sets the mode.
 
-| Mode | Use | Identity |
-| --- | --- | --- |
-| `mock` | Local network and development | A person selects a name. There is no password. |
-| `supabase` | Cloud deployment | Supabase Auth email one-time code. A JWT identifies the person. |
+| Mode       | Use                           | Identity                                                        |
+| ---------- | ----------------------------- | --------------------------------------------------------------- |
+| `mock`     | Local network and development | A person selects a name. There is no password.                  |
+| `supabase` | Cloud deployment              | Supabase Auth email one-time code. A JWT identifies the person. |
 
 Many functions exist only in `mock` mode. These are the sessions panel, groups, the settings page and people management.
 
@@ -82,25 +82,25 @@ Many functions exist only in `mock` mode. These are the sessions panel, groups, 
 
 The system must use these technologies, or equivalents with the same behavior:
 
-| Area | Technology | Version |
-| --- | --- | --- |
-| Runtime | Node.js | 26 or later |
-| Package manager | pnpm | 12.16.1 |
-| Monorepo | Turborepo | 2.11 |
-| Web framework | Next.js, App Router, `output: "standalone"` | 16.4.5 |
-| UI | React | 19.2 |
-| Styles | Tailwind CSS | 4.3 |
-| Icons | `lucide-react` | 1.68 |
-| Font | `geist` | 1.9 |
-| Validation | `zod` | 4.6 |
-| Database driver | `postgres` (postgres.js) | 4.0 |
-| JWT | `jose` | 6.2 |
-| Image processing | `sharp` | 0.35 |
-| Tests | Vitest | 5.1 |
-| Lint | ESLint with `eslint-config-next` | 9.39 |
-| Language | TypeScript, strict | 5.9 |
-| Database | PostgreSQL | 17 |
-| Containers | Podman or Docker, with compose | Any current |
+| Area             | Technology                                  | Version     |
+| ---------------- | ------------------------------------------- | ----------- |
+| Runtime          | Node.js                                     | 26 or later |
+| Package manager  | pnpm                                        | 12.16.1     |
+| Monorepo         | Turborepo                                   | 2.11        |
+| Web framework    | Next.js, App Router, `output: "standalone"` | 16.4.5      |
+| UI               | React                                       | 19.2        |
+| Styles           | Tailwind CSS                                | 4.3         |
+| Icons            | `lucide-react`                              | 1.68        |
+| Font             | `geist`                                     | 1.9         |
+| Validation       | `zod`                                       | 4.6         |
+| Database driver  | `postgres` (postgres.js)                    | 4.0         |
+| JWT              | `jose`                                      | 6.2         |
+| Image processing | `sharp`                                     | 0.35        |
+| Tests            | Vitest                                      | 5.1         |
+| Lint             | ESLint with `eslint-config-next`            | 9.39        |
+| Language         | TypeScript, strict                          | 5.9         |
+| Database         | PostgreSQL                                  | 17          |
+| Containers       | Podman or Docker, with compose              | Any current |
 
 ---
 
@@ -134,19 +134,19 @@ The system must use these technologies, or equivalents with the same behavior:
 
 `REPO-002` The root `package.json` must have these scripts:
 
-| Script | Command |
-| --- | --- |
-| `dev` | `turbo run dev` |
-| `build` | `turbo run build` |
-| `lint` | `turbo run lint` |
-| `typecheck` | `turbo run typecheck` |
-| `test` | `turbo run test` |
-| `db:up` | `./scripts/compose.sh up -d --wait db` |
-| `db:down` | `./scripts/compose.sh down` |
-| `db:reset` | `./scripts/compose.sh down -v && ./scripts/compose.sh up -d --wait db` |
-| `stack:up` | `./scripts/build-image.sh && ./scripts/compose.sh up -d --wait` |
-| `stack:phone` | `./scripts/stack-phone.sh` |
-| `stack:down` | `./scripts/compose.sh down` |
+| Script        | Command                                                                |
+| ------------- | ---------------------------------------------------------------------- |
+| `dev`         | `turbo run dev`                                                        |
+| `build`       | `turbo run build`                                                      |
+| `lint`        | `turbo run lint`                                                       |
+| `typecheck`   | `turbo run typecheck`                                                  |
+| `test`        | `turbo run test`                                                       |
+| `db:up`       | `./scripts/compose.sh up -d --wait db`                                 |
+| `db:down`     | `./scripts/compose.sh down`                                            |
+| `db:reset`    | `./scripts/compose.sh down -v && ./scripts/compose.sh up -d --wait db` |
+| `stack:up`    | `./scripts/build-image.sh && ./scripts/compose.sh up -d --wait`        |
+| `stack:phone` | `./scripts/stack-phone.sh`                                             |
+| `stack:down`  | `./scripts/compose.sh down`                                            |
 
 `REPO-003` In `turbo.json`, the `build` task must depend on `^build` and `typecheck`. Its outputs are `.next/**`, but not `.next/cache/**`.
 
@@ -211,20 +211,20 @@ All tables are in schema `app_nutrition`, except where the text gives a differen
 
 One row for each person.
 
-| Column | Type | Rules |
-| --- | --- | --- |
-| `user_id` | `uuid` | Primary key. References `auth.users`. |
-| `display_name` | `text` | Nullable. Length 1 to 40. Unique index on `lower(display_name)`. |
-| `target_calories` | `integer` | Not null. Default 2000. Range 800 to 10000. |
-| `target_protein_g` | `integer` | Not null. Default 130. Range 0 to 1000. |
-| `target_carbs_g` | `integer` | Not null. Default 220. Range 0 to 2000. |
-| `target_fat_g` | `integer` | Not null. Default 65. Range 0 to 1000. |
-| `target_glasses` | `integer` | Not null. Default 8. Range 1 to 50. |
-| `current_weight_kg` | `numeric(5,2)` | Nullable. Range 20 to 500. |
-| `goal_weight_kg` | `numeric(5,2)` | Nullable. Range 20 to 500. |
-| `timezone` | `text` | Not null. Default `'UTC'`. An IANA zone name. |
-| `created_at` | `timestamptz` | Not null. Default `now()`. |
-| `updated_at` | `timestamptz` | Not null. Default `now()`. |
+| Column              | Type           | Rules                                                            |
+| ------------------- | -------------- | ---------------------------------------------------------------- |
+| `user_id`           | `uuid`         | Primary key. References `auth.users`.                            |
+| `display_name`      | `text`         | Nullable. Length 1 to 40. Unique index on `lower(display_name)`. |
+| `target_calories`   | `integer`      | Not null. Default 2000. Range 800 to 10000.                      |
+| `target_protein_g`  | `integer`      | Not null. Default 130. Range 0 to 1000.                          |
+| `target_carbs_g`    | `integer`      | Not null. Default 220. Range 0 to 2000.                          |
+| `target_fat_g`      | `integer`      | Not null. Default 65. Range 0 to 1000.                           |
+| `target_glasses`    | `integer`      | Not null. Default 8. Range 1 to 50.                              |
+| `current_weight_kg` | `numeric(5,2)` | Nullable. Range 20 to 500.                                       |
+| `goal_weight_kg`    | `numeric(5,2)` | Nullable. Range 20 to 500.                                       |
+| `timezone`          | `text`         | Not null. Default `'UTC'`. An IANA zone name.                    |
+| `created_at`        | `timestamptz`  | Not null. Default `now()`.                                       |
+| `updated_at`        | `timestamptz`  | Not null. Default `now()`.                                       |
 
 `DB-020` A `before update` trigger must set `updated_at` to `now()`. The trigger function must use `set search_path = ''`.
 
@@ -234,19 +234,19 @@ One row for each person.
 
 One row for each meal.
 
-| Column | Type | Rules |
-| --- | --- | --- |
-| `id` | `uuid` | Primary key. Default `gen_random_uuid()`. |
-| `user_id` | `uuid` | Not null. References `auth.users`. |
-| `image_url` | `text` | Nullable. |
-| `food_name` | `text` | Not null. Length 1 to 200. |
-| `protein_g` | `numeric(6,1)` | Not null. Range 0 to 2000. |
-| `carbs_g` | `numeric(6,1)` | Not null. Range 0 to 2000. |
-| `fat_g` | `numeric(6,1)` | Not null. Range 0 to 2000. |
-| `calories` | `integer` | Generated, stored. See `CALC-001`. |
-| `notes` | `text` | Nullable. Maximum length 2000. |
-| `logged_at` | `timestamptz` | Not null. Default `now()`. |
-| `created_at` | `timestamptz` | Not null. Default `now()`. |
+| Column       | Type           | Rules                                     |
+| ------------ | -------------- | ----------------------------------------- |
+| `id`         | `uuid`         | Primary key. Default `gen_random_uuid()`. |
+| `user_id`    | `uuid`         | Not null. References `auth.users`.        |
+| `image_url`  | `text`         | Nullable.                                 |
+| `food_name`  | `text`         | Not null. Length 1 to 200.                |
+| `protein_g`  | `numeric(6,1)` | Not null. Range 0 to 2000.                |
+| `carbs_g`    | `numeric(6,1)` | Not null. Range 0 to 2000.                |
+| `fat_g`      | `numeric(6,1)` | Not null. Range 0 to 2000.                |
+| `calories`   | `integer`      | Generated, stored. See `CALC-001`.        |
+| `notes`      | `text`         | Nullable. Maximum length 2000.            |
+| `logged_at`  | `timestamptz`  | Not null. Default `now()`.                |
+| `created_at` | `timestamptz`  | Not null. Default `now()`.                |
 
 `DB-030` `calories` must be `generated always as (round(protein_g * 4 + carbs_g * 4 + fat_g * 9)::integer) stored`.
 
